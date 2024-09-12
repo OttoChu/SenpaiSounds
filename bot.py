@@ -5,6 +5,9 @@ import random
 
 import discord
 from discord.ext import commands
+
+import urllib.request, json 
+
 load_dotenv()
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
@@ -63,6 +66,46 @@ async def roll_dice(ctx, number_of_dice: int = 1, number_of_sides: int = 6):
     ]
     await ctx.send(", ".join(dice))
 
+@bot.command()
+async def dog(ctx):
+    # Gets a random dog image
+    with urllib.request.urlopen(f"https://api.thedogapi.com/v1/images/search?") as url:
+        pic_url = json.loads(url.read().decode())[0]
+    # Gets the details of the dog
+    with urllib.request.urlopen(f"https://api.thedogapi.com/v1/images/{pic_url['id']}") as url:
+        pic_detail = json.loads(url.read().decode())
+
+    # Formats the message
+    emb = discord.Embed(title=f"A dog has been summoned!", color=0x00ff00)
+    emb.set_image(url=pic_url["url"])
+    try:
+        emb.add_field(name="Breed", value=pic_detail['breeds'][0]['name'], inline=False)
+    except KeyError:
+        emb.add_field(name="Breed", value="Unknown", inline=False)
+    try:
+        emb.add_field(name="Bred For", value=pic_detail['breeds'][0]['bred_for'], inline=False)
+    except KeyError:
+        pass
+    try:
+        emb.add_field(name="Description", value=pic_detail['breeds'][0]['description'], inline=False)
+    except KeyError:
+            pass
+    try:
+        emb.add_field(name="Temperament", value=pic_detail['breeds'][0]['temperament'], inline=False)
+    except KeyError:
+        pass
+    try:
+        emb.add_field(name="Life Span", value=pic_detail['breeds'][0]['life_span'], inline=False)
+    except KeyError:
+        pass
+    emb.set_footer(text=f"Requested by {ctx.author.name}")
+    await ctx.send(embed=emb)
+
+@bot.command()
+async def cat(ctx):
+    # TODO: Get a random cat image and show details like for the dogs
+    await ctx.send("function not implemented yet")
+        
 @bot.command()
 async def laugh(ctx):
     await ctx.send("<a:laugh:1283320822928248902>")
