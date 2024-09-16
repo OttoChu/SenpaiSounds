@@ -10,4 +10,4 @@ f"You just made sure everyone knew {message.author.mention} existed. Now, what s
 f"Is this a JoJo reference? Because only a Stand user could be bold enough to ping everyone like this, {message.author.mention}."
 f"{message.author.mention} was pulling for a 5-star in a gacha game, but all they got was everyone's attention."
 f"{message.author.mention} just pulled a 3-star message from the gacha of spam. Not exactly the rare drop we were hoping for."
-f"{message.author.mention}  just dropped a message like a gacha roll with terrible odds. We’re all wishing for a refund."
+f"{message.author.mention}  just dropped a message like a gacha roll with terrible odds. We're all wishing for a refund."
