@@ -1,9 +1,8 @@
 import discord
 from discord.ext import commands
-from utils.embbed_list import PaginationView
-import random
-
+from utils.embedded_list import PaginationView
 from utils import dog
+import random
 
 
 class General(commands.Cog):

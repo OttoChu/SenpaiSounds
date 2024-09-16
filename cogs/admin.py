@@ -32,7 +32,6 @@ class Admin(commands.Cog):
     # Clear messages in a channel
     @commands.command()
     async def clear(self, ctx, amount: int):
-        # clear the messages stated in the amount then send a message that the messages have been cleared
         await ctx.channel.purge(limit=amount + 1)
         await ctx.send(f'{amount} messages have been cleared.')
         
