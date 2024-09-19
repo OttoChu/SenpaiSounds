@@ -33,8 +33,8 @@ class Admin(commands.Cog):
     @commands.command()
     async def clear(self, ctx, amount: int):
         await ctx.channel.purge(limit=amount + 1)
-        await ctx.send(f'{amount} messages have been cleared.')
-        
+        await ctx.send(f'{amount} messages have been cleared by {ctx.author.mention}.')
+
 
 async def setup(bot):
     await bot.add_cog(Admin(bot))

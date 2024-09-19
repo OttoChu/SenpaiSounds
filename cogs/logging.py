@@ -51,7 +51,6 @@ class Logging(commands.Cog):
     # Task to send annoying messages when someone pings everyone
     @tasks.loop(minutes=1)
     async def annoying_pings(self, message):
-
         await message.channel.send(eval(choice(self.annoying_messages)))
         self.counter += 1
         if self.counter >= 5:
