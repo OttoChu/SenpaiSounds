@@ -7,7 +7,6 @@ The list ***may change*** between pushes.
 - Users can use media control even if they are not in the same voice channel
 
 ## Next to work on	
-- shuffle playlist
 - loop playlist
 - edit playlist 
     - remove chosen song
@@ -23,6 +22,7 @@ The list ***may change*** between pushes.
 - add total duration for the playlist
 - better help function for usability
 - add the time when the user add the song
+- make the admin commands only works for some roles only
 
 ## Database
 - save playlist to be used later

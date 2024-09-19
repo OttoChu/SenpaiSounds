@@ -4,6 +4,7 @@ from discord.ext import commands
 import yt_dlp
 from youtubesearchpython import VideosSearch
 from utils.embedded_list import PaginationView
+import random
 
 
 class Youtube_Player(commands.Cog):
@@ -183,6 +184,22 @@ class Youtube_Player(commands.Cog):
                               list_description=description, items_per_page=5)
         emb = view.create_embed()
         await ctx.send(embed=emb, view=view)
+
+    # Command to clear the playlist
+    @commands.command()
+    async def clear(self, ctx: commands.Context) -> None:
+        self.playlist = []
+        await ctx.send("Playlist cleared!")
+
+    # Command to shuffle the playlist
+    @commands.command()
+    async def shuffle(self, ctx: commands.Context) -> None:
+        if not self.playlist:
+            await ctx.send("Nothing to shuffle!")
+            return
+
+        random.shuffle(self.playlist)
+        await ctx.send("Playlist shuffled!")
 
     # Command to show the current song
     @commands.command()
