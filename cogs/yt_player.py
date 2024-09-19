@@ -98,6 +98,7 @@ class Youtube_Player(commands.Cog):
 
         await ctx.send(embed=emb)
 
+    # Callback function that is called after the audio is done playing
     def after_playing(self, error: Exception) -> None:
         '''
         Callback function that is called after the audio is done playing
@@ -107,24 +108,20 @@ class Youtube_Player(commands.Cog):
         '''
         if error:
             print(f"An error occurred: {error}")
-        if self.playlist:
-            self.playlist.pop(0)
-            if self.playlist:
-                title, yt_url, audio_url, requester = self.playlist[0]
-                self.current_song = (title, yt_url, audio_url, requester)
-                asyncio.run_coroutine_threadsafe(
-                    self.play_sound(self.current_voice_client, audio_url),
-                    self.bot.loop
-                )
-                asyncio.run_coroutine_threadsafe(
-                    self.send_play_message(self.current_ctx),
-                    self.bot.loop
-                )
-        else:
+
+        # Continue playing the playlist if there are more songs
+        if len(self.playlist) > 0:
+            self.current_song = self.playlist[0]
             asyncio.run_coroutine_threadsafe(
-                self.current_ctx.send("Reached the end of the playlist!"),
+                self.play_sound(self.current_voice_client,
+                                self.current_song[2]),
                 self.bot.loop
             )
+            asyncio.run_coroutine_threadsafe(
+                self.send_play_message(self.current_ctx),
+                self.bot.loop
+            )
+            self.playlist.pop(0)
 
     # Command to play music from YouTube
     @commands.command()
@@ -148,12 +145,13 @@ class Youtube_Player(commands.Cog):
         self.playlist.append((title, yt_url, audio_url, ctx.author.mention))
         await wait_message.delete()
 
+        # Play the song if nothing is playing
         if not voice_client.is_playing():
-
-            title, yt_url, audio_url, requester = self.playlist.pop()
-            self.current_song = (title, yt_url, audio_url, requester)
-            await self.play_sound(voice_client, audio_url)
+            self.current_song = self.playlist.pop(0)
+            await self.play_sound(voice_client, self.current_song[2])
             await self.send_play_message(ctx)
+
+        # Add the song to the playlist if something is playing
         else:
             emb = discord.Embed(title="Added to Playlist", color=0x00ff00)
             emb.add_field(
@@ -194,6 +192,68 @@ class Youtube_Player(commands.Cog):
             return
 
         await self.send_play_message(ctx)
+
+    # Command to skip the current song
+    @commands.command()
+    async def skip(self, ctx: commands.Context) -> None:
+        self.current_voice_client = await self.get_voice_client(ctx)
+        if not self.current_voice_client:
+            return
+
+        self.current_voice_client.stop()
+        if len(self.playlist) > 0:
+            await self.play_sound(self.current_voice_client, self.playlist[0][2])
+        else:
+            await ctx.send("No more songs in the playlist!")
+
+    # Command to stop the music
+    @commands.command()
+    async def stop(self, ctx: commands.Context) -> None:
+        self.current_voice_client = await self.get_voice_client(ctx)
+        if not self.current_voice_client:
+            return
+
+        self.current_voice_client.stop()
+        await ctx.send("Stopped!")
+
+    # Command to pause the music
+    @commands.command()
+    async def pause(self, ctx: commands.Context) -> None:
+        self.current_voice_client = await self.get_voice_client(ctx)
+        if not self.current_voice_client:
+            return
+        if self.current_song is None:
+            await ctx.send("Nothing is playing!")
+            return
+
+        self.current_voice_client.pause()
+        await ctx.send("Paused!")
+
+    # Command to resume the music
+    @commands.command()
+    async def resume(self, ctx: commands.Context) -> None:
+        self.current_voice_client = await self.get_voice_client(ctx)
+        if not self.current_voice_client:
+            return
+        if self.current_song is None:
+            await ctx.send("Nothing is playing!")
+            return
+
+        self.current_voice_client.resume()
+        await self.send_play_message(ctx)
+
+    # Command to disconnect the bot from the voice channel
+    @commands.command()
+    async def disconnect(self, ctx: commands.Context) -> None:
+        if not self.current_voice_client:
+            await ctx.send("I'm not connected to a voice channel!")
+            return
+
+        # Flags to stop the player sending messages before disconnecting
+        self.playlist = []
+        self.current_song = None
+        await self.current_voice_client.disconnect()
+        await ctx.send(f"Disconnected from {self.current_voice_client.channel.name}!")
 
 
 async def setup(bot):
