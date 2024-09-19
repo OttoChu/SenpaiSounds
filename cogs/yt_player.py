@@ -123,6 +123,8 @@ class Youtube_Player(commands.Cog):
                 self.bot.loop
             )
             self.playlist.pop(0)
+        else:
+            self.current_song = None
 
     # Command to play music from YouTube
     @commands.command()
@@ -130,21 +132,41 @@ class Youtube_Player(commands.Cog):
         voice_client = await self.get_voice_client(ctx)
         self.current_voice_client = voice_client
         self.current_ctx = ctx
+        title, yt_url = None, None
         if not voice_client:
             return
 
         # Extract audio stream URL without downloading
         wait_message = await ctx.send("Please wait while I fetch the audio...")
-        title, yt_url = self.search_youtube(query)
-        if not title or not yt_url:
-            await wait_message.delete()
-            await ctx.send(f"No results found!\n{ctx.author.mention}, please try another query.")
-            return
-        info = self.ytdlp.extract_info(yt_url, download=False)
-        audio_url = info['url']
 
+        # Check if the query is a YouTube URL
+        if "https://www.youtube.com/watch?v=" in query:
+            try:
+                info = self.ytdlp.extract_info(query, download=False)
+                audio_url = info['url']
+                title = info['title']
+                yt_url = query
+
+            # Video not available on YouTube
+            except Exception as e:
+                await wait_message.delete()
+                if e == yt_dlp.utils.DownloadError:
+                    await ctx.send(f"Video not available on YouTube!\n{ctx.author.mention}, please try another query.")
+                else:
+                    await ctx.send(f"The URL maybe invalid or truncated!\n{ctx.author.mention}, please try another query.")
+                return
+            
+        else:
+            title, yt_url = self.search_youtube(query)
+            await wait_message.delete()
+            if not title or not yt_url:
+                await ctx.send(f"No results found!\n{ctx.author.mention}, please try another query.")
+                return
+            info = self.ytdlp.extract_info(yt_url, download=False)
+            audio_url = info['url']
+
+        # Add the song to the playlist
         self.playlist.append((title, yt_url, audio_url, ctx.author.mention))
-        await wait_message.delete()
 
         # Play the song if nothing is playing
         if not voice_client.is_playing():
@@ -167,7 +189,7 @@ class Youtube_Player(commands.Cog):
         if not self.playlist:
             emb = discord.Embed(title="Nothing else is in the playlist",
                                 color=0x00ff00)
-            emb.description = "Add some songs using the `!play` command!"
+            emb.description = "Add more using the `!play` command!"
             await ctx.send(embed=emb)
             return
 
@@ -231,6 +253,8 @@ class Youtube_Player(commands.Cog):
             return
 
         self.current_voice_client.stop()
+        self.playlist = []
+        self.current_song = None
         await ctx.send("Stopped!")
 
     # Command to pause the music
