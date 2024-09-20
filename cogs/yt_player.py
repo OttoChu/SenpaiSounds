@@ -20,11 +20,22 @@ class Youtube_Player(commands.Cog):
             'default_search': 'ytsearch', 'quiet': True
         }
         self.ytdlp = yt_dlp.YoutubeDL(yt_dlp_format_options)
+    
+    # Helper function to reset the player
+    def reset(self) -> None:
+        '''
+        Reset the player
+        '''
+        self.playlist = []
+        self.current_song = None
+        self.current_voice_client = None
+        self.current_ctx = None
 
     # Helper function to search for a video on YouTube
     def search_youtube(self, query: str) -> tuple:
         '''
-        Search for a video on YouTube and return the title and URL of the first result
+        Search for a video on YouTube and return the title and URL of the 
+        first result
 
         Parameters:
         query (str): The search query
@@ -62,26 +73,17 @@ class Youtube_Player(commands.Cog):
         )
         voice_client.play(source, after=self.after_playing)
 
-    # Helper function to get voice channel
-    async def get_voice_client(self, ctx: commands.Context) -> discord.VoiceClient:
+    # Helper function to send not in voice channel message
+    async def send_not_in_voice_channel_message(self, ctx: commands.Context) -> None:
         '''
-        Get the voice client of the bot
+        Send a message to the channel that the bot is not in a voice channel
 
         Parameters:
         ctx (commands.Context): The context of the command
-
-        Returns:
-        voice_client (discord.VoiceClient): The voice client of the bot
         '''
-        if not ctx.author.voice:
-            await ctx.send(f"{ctx.author.mention}, you need to be in a voice channel to use this command!")
-            return None
-        if not ctx.guild.voice_client:
-            voice_channel = ctx.author.voice.channel
-            voice_client = await voice_channel.connect()
-        else:
-            voice_client = ctx.guild.voice_client
-        return voice_client
+        emb = discord.Embed(title="Not in a voice channel", color=0xff0000)
+        emb.description = "Use the `!play song_name` command to play music!"
+        await ctx.send(embed=emb)
 
     # Helper function to send play message
     async def send_play_message(self, ctx: commands.Context) -> None:
@@ -125,16 +127,39 @@ class Youtube_Player(commands.Cog):
             self.playlist.pop(0)
         else:
             self.current_song = None
+            asyncio.run_coroutine_threadsafe(
+                self.auto_disconnect(),
+                self.bot.loop
+            )
+
+    # Helper function to auto-disconnect after 3 seconds if no music is playing
+    async def auto_disconnect(self) -> None:
+        '''
+        Disconnect the bot from the voice channel if no music is playing
+        after 5 minutes
+        '''
+        await asyncio.sleep(300)
+        if (not self.current_voice_client.is_playing() 
+            and not self.current_song 
+            and self.current_voice_client):
+            await self.current_voice_client.disconnect()
+            emb = discord.Embed(title=f"Disconnected form {self.current_voice_client.channel.name}", color=0xff0000)
+            emb.description = f"Call me back with the `!play song_name` command!"
+            await self.current_ctx.send(embed=emb)
+            self.reset()
 
     # Command to play music from YouTube
     @commands.command()
     async def play(self, ctx: commands.Context, *, query: str) -> None:
-        voice_client = await self.get_voice_client(ctx)
-        self.current_voice_client = voice_client
-        self.current_ctx = ctx
-        title, yt_url = None, None
-        if not voice_client:
+        # User must be in a voice channel to use this command
+        if not ctx.author.voice:
+            await ctx.send(f"{ctx.author.mention}, you need to be in a voice channel to use this command!")
             return
+        # Join the voice channel if the bot is not already connected
+        if not ctx.guild.voice_client:
+            voice_channel = ctx.author.voice.channel
+            self.current_voice_client = await voice_channel.connect()
+            self.current_ctx = ctx
 
         # Extract audio stream URL without downloading
         wait_message = await ctx.send("Please wait while I fetch the audio...")
@@ -169,9 +194,9 @@ class Youtube_Player(commands.Cog):
         self.playlist.append((title, yt_url, audio_url, ctx.author.mention))
 
         # Play the song if nothing is playing
-        if not voice_client.is_playing():
+        if not self.current_voice_client.is_playing():
             self.current_song = self.playlist.pop(0)
-            await self.play_sound(voice_client, self.current_song[2])
+            await self.play_sound(self.current_voice_client, self.current_song[2])
             await self.send_play_message(ctx)
 
         # Add the song to the playlist if something is playing
@@ -189,7 +214,7 @@ class Youtube_Player(commands.Cog):
         if not self.playlist:
             emb = discord.Embed(title="Nothing else is in the playlist",
                                 color=0x00ff00)
-            emb.description = "Add more using the `!play` command!"
+            emb.description = "Use the `!play song_name` command to add more songs!"
             await ctx.send(embed=emb)
             return
 
@@ -211,23 +236,34 @@ class Youtube_Player(commands.Cog):
     @commands.command()
     async def clear(self, ctx: commands.Context) -> None:
         self.playlist = []
-        await ctx.send("Playlist cleared!")
+        emb = discord.Embed(title="Playlist cleared", color=0x00ff00)
+        emb.description = "Add new songs with the `!play song_name` command!"
+        await ctx.send(embed=emb)
 
     # Command to shuffle the playlist
     @commands.command()
     async def shuffle(self, ctx: commands.Context) -> None:
         if not self.playlist:
-            await ctx.send("Nothing to shuffle!")
+            emb = discord.Embed(title="Nothing to shuffle", color=0xff0000)
+            emb.description = "Add songs with the `!play song_name` command!"
+            await ctx.send(embed=emb)
             return
 
         random.shuffle(self.playlist)
-        await ctx.send("Playlist shuffled!")
+        emb = discord.Embed(title="Playlist shuffled", color=0x00ff00)
+        emb.description = "Use the `!playlist` command to see the new order!"
+        await ctx.send(embed=emb)
 
     # Command to show the current song
     @commands.command()
     async def playing(self, ctx: commands.Context) -> None:
+        if not self.current_voice_client:
+            await self.send_not_in_voice_channel_message(ctx)
+            return
         if not self.current_song:
-            await ctx.send("Nothing is playing!")
+            emb = discord.Embed(title="Nothing is playing", color=0xff0000)
+            emb.description = "Play something with the `!play song_name` command!"
+            await ctx.send(embed=emb)
             return
 
         await self.send_play_message(ctx)
@@ -235,49 +271,59 @@ class Youtube_Player(commands.Cog):
     # Command to skip the current song
     @commands.command()
     async def skip(self, ctx: commands.Context) -> None:
-        self.current_voice_client = await self.get_voice_client(ctx)
         if not self.current_voice_client:
+            await self.send_not_in_voice_channel_message(ctx)
             return
 
         self.current_voice_client.stop()
         if len(self.playlist) > 0:
             await self.play_sound(self.current_voice_client, self.playlist[0][2])
         else:
-            await ctx.send("No more songs in the playlist!")
+            emb = discord.Embed(title="No more songs in the playlist", color=0xff0000)
+            emb.description = "Add more songs with the `!play song_name` command!"
+            await ctx.send(embed=emb)
 
     # Command to stop the music
     @commands.command()
     async def stop(self, ctx: commands.Context) -> None:
-        self.current_voice_client = await self.get_voice_client(ctx)
         if not self.current_voice_client:
+            await self.send_not_in_voice_channel_message(ctx)
             return
 
         self.current_voice_client.stop()
         self.playlist = []
         self.current_song = None
-        await ctx.send("Stopped!")
+        emb = discord.Embed(title="Stopped", color=0xff0000)
+        emb.description = "Everything has been stopped!\nUse the `!play song_name` command to play music!"
+        await ctx.send(embed=emb)
 
     # Command to pause the music
     @commands.command()
     async def pause(self, ctx: commands.Context) -> None:
-        self.current_voice_client = await self.get_voice_client(ctx)
         if not self.current_voice_client:
+            await self.send_not_in_voice_channel_message(ctx)
             return
         if self.current_song is None:
-            await ctx.send("Nothing is playing!")
+            emb = discord.Embed(title="Nothing is playing", color=0xff0000)
+            emb.description = "Play something with the `!play song_name` command!"
+            await ctx.send(embed=emb)
             return
 
         self.current_voice_client.pause()
-        await ctx.send("Paused!")
+        emb = discord.Embed(title="Paused", color=0x00ff00)
+        emb.description = "Use the `!resume` command to resume the music!"
+        await ctx.send(embed=emb)
 
     # Command to resume the music
     @commands.command()
     async def resume(self, ctx: commands.Context) -> None:
-        self.current_voice_client = await self.get_voice_client(ctx)
         if not self.current_voice_client:
+            await self.send_not_in_voice_channel_message(ctx)
             return
         if self.current_song is None:
-            await ctx.send("Nothing is playing!")
+            emb = discord.Embed(title="Nothing is playing", color=0xff0000)
+            emb.description = "Play something with the `!play song_name` command!"
+            await ctx.send(embed=emb)
             return
 
         self.current_voice_client.resume()
@@ -286,15 +332,18 @@ class Youtube_Player(commands.Cog):
     # Command to disconnect the bot from the voice channel
     @commands.command()
     async def disconnect(self, ctx: commands.Context) -> None:
-        if not self.current_voice_client:
-            await ctx.send("I'm not connected to a voice channel!")
+        if self.current_voice_client is None:
+            await self.send_not_in_voice_channel_message(ctx)
             return
-
+        
         # Flags to stop the player sending messages before disconnecting
         self.playlist = []
         self.current_song = None
         await self.current_voice_client.disconnect()
-        await ctx.send(f"Disconnected from {self.current_voice_client.channel.name}!")
+        emb = discord.Embed(title=f"Disconnected form {self.current_voice_client.channel.name}", color=0xff0000)
+        emb.description = f"Call me back with the `!play song_name` command!"
+        await ctx.send(embed=emb)
+        self.reset()
 
 
 async def setup(bot: commands.Bot) -> None:
