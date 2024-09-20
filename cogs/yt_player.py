@@ -44,20 +44,22 @@ class Youtube_Player(commands.Cog):
         title (str): The title of the video
         url (str): The URL of the video
         '''
-        video_search = VideosSearch(query, limit=10)
+        try:
+            video_search = VideosSearch(str(query), limit=5)
+        except Exception:
+            return None, None
+        
         for result in video_search.result()['result']:
             if not result.get('isLive', False):
                 return result['title'], result['link']
         return None, None
 
     # Helper function to play sound from a URL
-    async def play_sound(self, voice_client: discord.VoiceClient, url: str) -> None:
+    async def play_sound(self, url: str) -> None:
         '''
         Play audio from a URL in the voice channel
 
         Parameters:
-        ctx (commands.Context): The context of the command
-        voice_client (discord.VoiceClient): The voice client of the bot
         url (str): The URL of the audio stream
         '''
         # FFmpeg options to stream audio from the URL
@@ -66,12 +68,17 @@ class Youtube_Player(commands.Cog):
             'options': '-vn'  # -vn tells ffmpeg that this is an audio-only stream,
         }
 
+        # Troll feature
+        # 1% chance to play a rickroll
+        if random.random() < 0.01:
+            url = "data/music.mp3"
+            ffmpeg_options = {'options': '-vn'}
+
         # Stream audio using discord's built-in support for audio URLs
-        source = discord.PCMVolumeTransformer(
-            discord.FFmpegPCMAudio(
-                url, executable="utils/ffmpeg/bin/ffmpeg.exe", **ffmpeg_options)
-        )
-        voice_client.play(source, after=self.after_playing)
+        source = discord.FFmpegPCMAudio(url, executable="utils/ffmpeg/bin/ffmpeg.exe", 
+                                        **ffmpeg_options)
+            
+        self.current_voice_client.play(source, after=self.after_playing)
 
     # Helper function to send not in voice channel message
     async def send_not_in_voice_channel_message(self, ctx: commands.Context) -> None:
@@ -116,8 +123,7 @@ class Youtube_Player(commands.Cog):
         if len(self.playlist) > 0:
             self.current_song = self.playlist[0]
             asyncio.run_coroutine_threadsafe(
-                self.play_sound(self.current_voice_client,
-                                self.current_song[2]),
+                self.play_sound(self.current_song[2]),
                 self.bot.loop
             )
             asyncio.run_coroutine_threadsafe(
@@ -136,12 +142,12 @@ class Youtube_Player(commands.Cog):
     async def auto_disconnect(self) -> None:
         '''
         Disconnect the bot from the voice channel if no music is playing
-        after 5 minutes
+        after 10 minutes
         '''
-        await asyncio.sleep(300)
+        await asyncio.sleep(600)
         if (not self.current_voice_client.is_playing() 
             and not self.current_song 
-            and self.current_voice_client):
+            and not self.current_voice_client):
             await self.current_voice_client.disconnect()
             emb = discord.Embed(title=f"Disconnected form {self.current_voice_client.channel.name}", color=0xff0000)
             emb.description = f"Call me back with the `!play song_name` command!"
@@ -196,7 +202,7 @@ class Youtube_Player(commands.Cog):
         # Play the song if nothing is playing
         if not self.current_voice_client.is_playing():
             self.current_song = self.playlist.pop(0)
-            await self.play_sound(self.current_voice_client, self.current_song[2])
+            await self.play_sound(self.current_song[2])
             await self.send_play_message(ctx)
 
         # Add the song to the playlist if something is playing
@@ -277,7 +283,7 @@ class Youtube_Player(commands.Cog):
 
         self.current_voice_client.stop()
         if len(self.playlist) > 0:
-            await self.play_sound(self.current_voice_client, self.playlist[0][2])
+            await self.play_sound(self.playlist[0][2])
         else:
             emb = discord.Embed(title="No more songs in the playlist", color=0xff0000)
             emb.description = "Add more songs with the `!play song_name` command!"

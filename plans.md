@@ -18,10 +18,6 @@ The list ***may change*** between pushes.
 - add button for media control (next, pause and stop)
 - add duration/timestamp for songs
 
-## Troll/Funny features
-- 1% chance of newly added song is a rickroll	
-- better laugh message (ping person + funny message)
-
 ## Roles
 - make the admin commands only works for some roles only
 

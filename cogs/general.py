@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
+import discord.ext
 from utils.embedded_list import PaginationView
-from utils import dog
+from utils import dog, gif
 import random
 
 
@@ -11,8 +12,50 @@ class General(commands.Cog):
 
     # Command to send a laughing gif
     @commands.command()
-    async def laugh(self, ctx: commands.Context):
-        await ctx.send("<a:laugh:1283320822928248902>")
+    async def laugh(self, ctx: commands.Context, person: str = None):
+        try:
+            person = await commands.MemberConverter().convert(ctx, str(person))
+        except commands.errors.MemberNotFound:
+            person = None
+        if ctx.author == person:
+            laugh_message = f"{ctx.author.mention} is laughing at themselves"
+        elif person is None:
+            laugh_message = f"{ctx.author.mention} is laughing"
+        else:
+            laugh_message = f"{ctx.author.mention} is laughing at {person.mention}"
+
+        gif_url = gif.get_gif_laugh()
+        if not gif_url:
+            embed = discord.Embed(title="Error", color=0xff0000)
+            embed.description = "GIPHY rate limit exceeded"
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(title="Laughing GIF", color=0x00ff00)
+            embed.description = laugh_message
+            embed.set_image(url=gif_url)
+            await ctx.send(embed=embed)
+
+    # Command to send a slapping gif
+    @commands.command()
+    async def slap(self, ctx: commands.Context, person: str = None):
+        try:
+            person = await commands.MemberConverter().convert(ctx, str(person))
+        except commands.errors.MemberNotFound:
+            person = None
+        if person is None:
+            slap_message = f"{ctx.author.mention} is slapping someone"
+        elif person == self.bot.user:
+            slap_message = f"{ctx.author.mention} is abusing a bot"
+        elif ctx.author == person:
+            slap_message = f"{ctx.author.mention} is slapping themselves"
+        else:
+            slap_message = f"{ctx.author.mention} is slapping {person.mention}"
+
+        gif_url = gif.get_gif_slap()
+        embed = discord.Embed(title="Slapping GIF", color=0x00ff00)
+        embed.description = slap_message
+        embed.set_image(url=gif_url)
+        await ctx.send(embed=embed)
 
     # Command to echo the message
     @commands.command()
