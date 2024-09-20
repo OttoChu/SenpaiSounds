@@ -5,14 +5,14 @@ from random import choice
 
 
 class Logging(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.counter = 0
         self.annoying_messages = get_annoying_messages()
 
     # Event to handle message edits
     @commands.Cog.listener()
-    async def on_message_edit(self, before, after):
+    async def on_message_edit(self, before: discord.Message, after: discord.Message):
         if before.author.bot:
             return
 
@@ -27,7 +27,7 @@ class Logging(commands.Cog):
 
     # Event to handle message deletions
     @commands.Cog.listener()
-    async def on_message_delete(self, message):
+    async def on_message_delete(self, message: discord.Message):
         if message.author.bot or '@everyone' in message.content or '@here' in message.content:
             return
 
@@ -41,7 +41,7 @@ class Logging(commands.Cog):
 
     # Event to handle message pings
     @commands.Cog.listener()
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         if message.author.bot:
             return
 
@@ -50,7 +50,7 @@ class Logging(commands.Cog):
 
     # Task to send annoying messages when someone pings everyone
     @tasks.loop(minutes=1)
-    async def annoying_pings(self, message):
+    async def annoying_pings(self, message: discord.Message):
         await message.channel.send(eval(choice(self.annoying_messages)))
         self.counter += 1
         if self.counter >= 5:
@@ -58,5 +58,5 @@ class Logging(commands.Cog):
             self.counter = 0
 
 
-async def setup(bot):
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Logging(bot))

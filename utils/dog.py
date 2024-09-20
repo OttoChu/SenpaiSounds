@@ -1,20 +1,6 @@
 import json
 import urllib.request
-
 from utils.json_handler import load_breeds
-
-
-def get_breeds_all():
-    # TODO: This might not be used
-    raise NotImplementedError
-    '''
-    Returns the list of dog breeds
-
-    Returns:
-    list: The list of dog breeds
-    '''
-    breeds = load_breeds('data/breeds.json')
-    return breeds
 
 
 def get_breeds_keys():
@@ -37,25 +23,6 @@ def get_breeds_value():
     '''
     breeds = load_breeds('data/breeds.json')
     return [str(values) for values in breeds.values()]
-
-
-def get_breed_id(breed_name: str) -> int:
-    # TODO: This might not be used
-    raise NotImplementedError
-    '''
-    Returns the breed id of the given breed name
-
-    Parameters:
-    breed_name (str): The name of the breed
-
-    Returns:
-    int: The breed id
-    '''
-    breeds = load_breeds('data/breeds.json')
-    for breed in breeds:
-        if breed['name'].lower() == breed_name.lower():
-            return breed['id']
-    return None
 
 
 def get_random_dog():

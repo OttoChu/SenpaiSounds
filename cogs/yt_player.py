@@ -297,5 +297,5 @@ class Youtube_Player(commands.Cog):
         await ctx.send(f"Disconnected from {self.current_voice_client.channel.name}!")
 
 
-async def setup(bot):
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Youtube_Player(bot))

@@ -1,4 +1,4 @@
-def get_annoying_messages():
+def get_annoying_messages() -> list:
     '''
     Returns the list of annoying messages
 

@@ -6,23 +6,28 @@ The list ***may change*** between pushes.
 ## Known Bugs
 - Users can use media control even if they are not in the same voice channel
 
-## Next to work on	
+## Playlist
 - loop playlist
 - edit playlist 
     - remove chosen song
     - move chosen song to different order
+- add total duration for the playlist
+- add the time when the user add the song in the playlist
+
+## Media control
+- add button for media control (next, pause and stop)
+- add duration/timestamp for songs
 
 ## Troll/Funny features
 - 1% chance of newly added song is a rickroll	
 - better laugh message (ping person + funny message)
 
-## Quality of life
-- add button for media control (next, pause and stop)
-- add duration/timestamp for songs
-- add total duration for the playlist
-- better help function for usability
-- add the time when the user add the song
+## Roles
 - make the admin commands only works for some roles only
+
+## Quality of life
+- better help function for usability
+- add error messages to assist the user (missing/wrong parameters)
 
 ## Database
 - save playlist to be used later

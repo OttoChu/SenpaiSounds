@@ -13,5 +13,5 @@ class SlashCommands(commands.Cog):
         await interaction.response.send_message(f"Pong! {latency}ms", ephemeral=True)
 
 
-async def setup(bot):
+async def setup(bot: commands.Bot):
     await bot.add_cog(SlashCommands(bot))

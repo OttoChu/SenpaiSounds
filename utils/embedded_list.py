@@ -39,7 +39,13 @@ class PaginationView(View):
         await interaction.response.edit_message(embed=embed)
 
     # Embed creation method remains part of PaginationView
-    def create_embed(self):
+    def create_embed(self) -> discord.Embed:
+        '''
+        Create an embed with the items for the current page
+        
+        Returns:
+        discord.Embed: The embed with the items for the current page
+        '''
         embed = discord.Embed(title=self.title, color=discord.Color.blue())
         if self.list_description:
             embed.description = self.list_description
