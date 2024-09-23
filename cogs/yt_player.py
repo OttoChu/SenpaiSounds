@@ -14,13 +14,14 @@ class Youtube_Player(commands.Cog):
         self.current_song = None
         self.current_voice_client = None
         self.current_ctx = None
+        self.loop_current = [False, None]
         # YouTube downloader settings
         yt_dlp_format_options = {
             'format': 'bestaudio/best', 'noplaylist': True,
             'default_search': 'ytsearch', 'quiet': True
         }
         self.ytdlp = yt_dlp.YoutubeDL(yt_dlp_format_options)
-    
+
     # Helper function to reset the player
     def reset(self) -> None:
         '''
@@ -30,6 +31,7 @@ class Youtube_Player(commands.Cog):
         self.current_song = None
         self.current_voice_client = None
         self.current_ctx = None
+        self.loop_current = [False, None]
 
     # Helper function to search for a video on YouTube
     def search_youtube(self, query: str) -> tuple:
@@ -48,7 +50,7 @@ class Youtube_Player(commands.Cog):
             video_search = VideosSearch(str(query), limit=5)
         except Exception:
             return None, None
-        
+
         for result in video_search.result()['result']:
             if not result.get('isLive', False):
                 return result['title'], result['link']
@@ -69,16 +71,29 @@ class Youtube_Player(commands.Cog):
         }
 
         # Troll feature
-        # 1% chance to play a rickroll
+        # 1% chance to play a rickroll instead of the requested song
+        # The chance can be adjusted to any value between 0 and 1
         if random.random() < 0.01:
             url = "data/music.mp3"
             ffmpeg_options = {'options': '-vn'}
 
         # Stream audio using discord's built-in support for audio URLs
-        source = discord.FFmpegPCMAudio(url, executable="utils/ffmpeg/bin/ffmpeg.exe", 
+        source = discord.FFmpegPCMAudio(url, executable="utils/ffmpeg/bin/ffmpeg.exe",
                                         **ffmpeg_options)
-            
+
         self.current_voice_client.play(source, after=self.after_playing)
+
+    # Helper function to return loop status
+    def get_loop_status(self) -> str:
+        '''
+        Get the loop status of the current song
+
+        Returns:
+        str: The loop status
+        '''
+        if self.loop_current[0]:
+            return f"This looped by {self.loop_current[1]}"
+        return ""
 
     # Helper function to send not in voice channel message
     async def send_not_in_voice_channel_message(self, ctx: commands.Context) -> None:
@@ -102,10 +117,22 @@ class Youtube_Player(commands.Cog):
         '''
         title, yt_url, _, requester = self.current_song
 
-        emb = discord.Embed(title="Playing", color=0x00ff00)
+        emb = discord.Embed(title=f"Playing", color=0x00ff00)
         emb.add_field(name="** **", value=f"[{title}]({yt_url})", inline=False)
         emb.add_field(name="Requested by", value=requester, inline=False)
+        emb.add_field(name="** **", value=self.get_loop_status(), inline=False)
+        await ctx.send(embed=emb)
 
+    # Helper function to send nothing is playing message
+    async def send_nothing_is_playing_message(self, ctx: commands.Context) -> None:
+        '''
+        Send a message to the channel that nothing is playing
+
+        Parameters:
+        ctx (commands.Context): The context of the command
+        '''
+        emb = discord.Embed(title="Nothing is playing", color=0xff0000)
+        emb.description = "Play something with the `!play song_name` command!"
         await ctx.send(embed=emb)
 
     # Callback function that is called after the audio is done playing
@@ -118,6 +145,10 @@ class Youtube_Player(commands.Cog):
         '''
         if error:
             print(f"An error occurred: {error}")
+
+        # Loop the current song if the loop flag is set
+        if self.loop_current[0]:
+            self.playlist.insert(0, self.current_song)
 
         # Continue playing the playlist if there are more songs
         if len(self.playlist) > 0:
@@ -145,11 +176,12 @@ class Youtube_Player(commands.Cog):
         after 10 minutes
         '''
         await asyncio.sleep(600)
-        if (not self.current_voice_client.is_playing() 
-            and not self.current_song 
-            and not self.current_voice_client):
+        if (not self.current_voice_client.is_playing()
+            and not self.current_song
+                and not self.current_voice_client):
             await self.current_voice_client.disconnect()
-            emb = discord.Embed(title=f"Disconnected form {self.current_voice_client.channel.name}", color=0xff0000)
+            emb = discord.Embed(
+                title=f"Disconnected form {self.current_voice_client.channel.name}", color=0xff0000)
             emb.description = f"Call me back with the `!play song_name` command!"
             await self.current_ctx.send(embed=emb)
             self.reset()
@@ -163,12 +195,14 @@ class Youtube_Player(commands.Cog):
             return
         # Join the voice channel if the bot is not already connected
         if not ctx.guild.voice_client:
+            wait_message = await ctx.send("Joining the voice channel...")
             voice_channel = ctx.author.voice.channel
             self.current_voice_client = await voice_channel.connect()
             self.current_ctx = ctx
+            await wait_message.delete()
 
         # Extract audio stream URL without downloading
-        wait_message = await ctx.send("Please wait while I fetch the audio...")
+        wait_message = await ctx.send("Fetching the audio...")
 
         # Check if the query is a YouTube URL
         if "https://www.youtube.com/watch?v=" in query:
@@ -186,10 +220,9 @@ class Youtube_Player(commands.Cog):
                 else:
                     await ctx.send(f"The URL maybe invalid or truncated!\n{ctx.author.mention}, please try another query.")
                 return
-            
+
         else:
             title, yt_url = self.search_youtube(query)
-            await wait_message.delete()
             if not title or not yt_url:
                 await ctx.send(f"No results found!\n{ctx.author.mention}, please try another query.")
                 return
@@ -198,6 +231,7 @@ class Youtube_Player(commands.Cog):
 
         # Add the song to the playlist
         self.playlist.append((title, yt_url, audio_url, ctx.author.mention))
+        await wait_message.delete()
 
         # Play the song if nothing is playing
         if not self.current_voice_client.is_playing():
@@ -231,7 +265,8 @@ class Youtube_Player(commands.Cog):
                                enumerate(zip(song_names, requesters), start=1)]
 
         title, yt_url, _, requester = self.current_song
-        description = f"**Currently playing:**\n[{title}]({yt_url})\nRequested by {requester}"
+
+        description = f"**Currently playing:**\n[{title}]({yt_url})\nRequested by {requester}\n{self.get_loop_status()}"
 
         view = PaginationView(song_with_requester, item_id=None, title="**Playlist**",
                               list_description=description, items_per_page=5)
@@ -267,12 +302,35 @@ class Youtube_Player(commands.Cog):
             await self.send_not_in_voice_channel_message(ctx)
             return
         if not self.current_song:
-            emb = discord.Embed(title="Nothing is playing", color=0xff0000)
-            emb.description = "Play something with the `!play song_name` command!"
-            await ctx.send(embed=emb)
+            await self.send_nothing_is_playing_message(ctx)
             return
 
         await self.send_play_message(ctx)
+
+    # Command to loop the current song
+    @commands.command()
+    async def loop(self, ctx: commands.Context) -> None:
+        if not self.current_voice_client:
+            await self.send_not_in_voice_channel_message(ctx)
+            return
+        if not self.current_song:
+            await self.send_nothing_is_playing_message(ctx)
+            return
+
+        self.loop_current[0] = not self.loop_current[0]
+
+        if self.loop_current[0]:
+            self.loop_current[1] = ctx.author.mention
+            emb = discord.Embed(
+                title="Looping the current song", color=0x00ff00)
+            emb.description = f"{self.current_song[0]} will be looped!"
+            emb.add_field(
+                name="** **", value="Use the `!loop` command again to stop looping!")
+        else:
+            emb = discord.Embed(
+                title="Stopped looping the current song", color=0xff0000)
+            emb.description = "Use the `!loop` command again to loop the song!"
+        await ctx.send(embed=emb)
 
     # Command to skip the current song
     @commands.command()
@@ -282,10 +340,22 @@ class Youtube_Player(commands.Cog):
             return
 
         self.current_voice_client.stop()
+
+        # Loop the current song if the loop flag is set
+        if self.loop_current[0]:
+            emb = discord.Embed(
+                title="The current song is being looped", color=0x00ff00)
+            emb.description = "Use the `!loop` command to stop looping before skipping!"
+            await ctx.send(embed=emb)
+            await self.play_sound(self.current_song[2])
+            return
+
+        # Continue playing the playlist if there are more songs
         if len(self.playlist) > 0:
             await self.play_sound(self.playlist[0][2])
         else:
-            emb = discord.Embed(title="No more songs in the playlist", color=0xff0000)
+            emb = discord.Embed(
+                title="No more songs in the playlist", color=0xff0000)
             emb.description = "Add more songs with the `!play song_name` command!"
             await ctx.send(embed=emb)
 
@@ -299,6 +369,7 @@ class Youtube_Player(commands.Cog):
         self.current_voice_client.stop()
         self.playlist = []
         self.current_song = None
+        self.loop_current = [False, None]
         emb = discord.Embed(title="Stopped", color=0xff0000)
         emb.description = "Everything has been stopped!\nUse the `!play song_name` command to play music!"
         await ctx.send(embed=emb)
@@ -310,9 +381,7 @@ class Youtube_Player(commands.Cog):
             await self.send_not_in_voice_channel_message(ctx)
             return
         if self.current_song is None:
-            emb = discord.Embed(title="Nothing is playing", color=0xff0000)
-            emb.description = "Play something with the `!play song_name` command!"
-            await ctx.send(embed=emb)
+            self.send_nothing_is_playing_message(ctx)
             return
 
         self.current_voice_client.pause()
@@ -327,9 +396,7 @@ class Youtube_Player(commands.Cog):
             await self.send_not_in_voice_channel_message(ctx)
             return
         if self.current_song is None:
-            emb = discord.Embed(title="Nothing is playing", color=0xff0000)
-            emb.description = "Play something with the `!play song_name` command!"
-            await ctx.send(embed=emb)
+            self.send_nothing_is_playing_message(ctx)
             return
 
         self.current_voice_client.resume()
@@ -341,12 +408,13 @@ class Youtube_Player(commands.Cog):
         if self.current_voice_client is None:
             await self.send_not_in_voice_channel_message(ctx)
             return
-        
+
         # Flags to stop the player sending messages before disconnecting
         self.playlist = []
         self.current_song = None
         await self.current_voice_client.disconnect()
-        emb = discord.Embed(title=f"Disconnected form {self.current_voice_client.channel.name}", color=0xff0000)
+        emb = discord.Embed(
+            title=f"Disconnected form {self.current_voice_client.channel.name}", color=0xff0000)
         emb.description = f"Call me back with the `!play song_name` command!"
         await ctx.send(embed=emb)
         self.reset()

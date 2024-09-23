@@ -7,7 +7,7 @@ load_dotenv()
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
-    
+
 
 async def load_extensions():
     await bot.load_extension('cogs.logging')
