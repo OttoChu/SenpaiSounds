@@ -336,7 +336,7 @@ class Youtube_Player(commands.Cog):
                           enumerate(zip(song_names, durations, requesters), start=1)]
         
         # duration of the current song is not accurate if it is looped
-        if self.get_loop_status() != "":
+        if self.loop_current[0]:
             loop_message = "*(Not accurate as the current song is looped)*"
         else:
             loop_message = ""
