@@ -16,6 +16,9 @@ class Youtube_Player(commands.Cog):
         self.current_voice_client = None
         self.current_ctx = None
         self.loop_current = [False, None]
+        self.start_time = 0
+        self.time_passed = 0
+
         # YouTube downloader settings
         yt_dlp_format_options = {
             'format': 'bestaudio/best', 'noplaylist': True,
@@ -35,8 +38,11 @@ class Youtube_Player(commands.Cog):
         self.current_voice_client = None
         self.current_ctx = None
         self.loop_current = [False, None]
+        self.start_time = 0
+        self.time_passed = 0
 
     # Helper function to search for a video on YouTube
+
     def search_youtube(self, query: str) -> tuple:
         '''
         Search for a video on YouTube and return the title and URL of the 
@@ -83,6 +89,10 @@ class Youtube_Player(commands.Cog):
         # Stream audio using discord's built-in support for audio URLs
         source = discord.FFmpegPCMAudio(url, executable="utils/ffmpeg/bin/ffmpeg.exe",
                                         **ffmpeg_options)
+
+        # Track the time the song started playing
+        self.start_time = datetime.datetime.now().timestamp()
+        self.time_passed = 0
 
         self.current_voice_client.play(source, after=self.after_playing)
 
@@ -137,13 +147,27 @@ class Youtube_Player(commands.Cog):
         ctx (commands.Context): The context of the command
         '''
         title, yt_url, _, duration, requester, time = self.current_song
+
+        if self.current_voice_client.is_playing():
+            self.time_passed = datetime.datetime.now().timestamp() - \
+                self.start_time + self.time_passed
+            self.start_time = datetime.datetime.now().timestamp()
+            current_timestamp = self.get_formatted_time(self.time_passed)
+        else:
+            current_timestamp = self.get_formatted_time(self.time_passed)
+
+        progress = int((self.time_passed / duration) * 30)
         duration = self.get_formatted_time(duration)
 
         emb = discord.Embed(title=f"Playing", color=0x00ff00)
         emb.add_field(
-            name="** **", value=f"[{title}]({yt_url}) ({duration})", inline=False)
+            name="** **", value=f"[{title}]({yt_url})", inline=False)
+        emb.add_field(
+            name="** **", value=f"{'▓' * progress}{'░' * (30 - progress)} ({current_timestamp}/{duration})", inline=False)
+
         emb.add_field(name="Requested by",
                       value=f"{requester} at {time}", inline=False)
+
         if self.loop_current[0]:
             emb.add_field(
                 name="** **", value=f"{self.get_loop_status()}", inline=False)
@@ -294,16 +318,30 @@ class Youtube_Player(commands.Cog):
             await ctx.send(embed=emb)
             return
 
+        self.time_passed = datetime.datetime.now().timestamp() - \
+            self.start_time + self.time_passed
+        self.start_time = datetime.datetime.now().timestamp()
+        time_left = self.current_song[3] - self.time_passed
+        total_time = self.get_formatted_time(sum([song[3] for song in self.playlist]) + time_left)
+        
         requesters = [song[4] for song in self.playlist]
         song_names = [f"[{song[0]}]({song[1]})" for song in self.playlist]
+
+
         durations = [self.get_formatted_time(
             song[3]) for song in self.playlist]
 
         formatted_song = [f"{i}. {requester} - {song} ({duration})\n"
                           for i, (song, duration, requester) in
                           enumerate(zip(song_names, durations, requesters), start=1)]
+        
+        # duration of the current song is not accurate if it is looped
+        if self.get_loop_status() != "":
+            loop_message = "*(Not accurate as the current song is looped)*"
+        else:
+            loop_message = ""
 
-        description = f"Songs in playlist: {len(self.playlist)}\nPlaylist duration: {self.get_formatted_time(sum([song[3] for song in self.playlist]))}"
+        description = f"Songs in playlist: **{len(self.playlist)}**\nPlaylist duration: **{total_time}** {loop_message}"
 
         view = PaginationView(formatted_song, item_id=None, title="Playlist",
                               list_description=description, items_per_page=5)
@@ -404,9 +442,13 @@ class Youtube_Player(commands.Cog):
             return
 
         self.current_voice_client.stop()
-        self.playlist = []
-        self.current_song = None
-        self.loop_current = [False, None]
+
+        voice_client = self.current_voice_client
+        ctx = self.current_ctx
+        self.reset()
+        self.current_voice_client = voice_client
+        self.current_ctx = ctx
+
         emb = discord.Embed(title="Stopped", color=0xff0000)
         emb.description = "Everything has been stopped!\nUse the `!play song_name` command to play music!"
         await ctx.send(embed=emb)
@@ -422,6 +464,7 @@ class Youtube_Player(commands.Cog):
             return
 
         self.current_voice_client.pause()
+        self.time_passed = datetime.datetime.now().timestamp() - self.start_time
         emb = discord.Embed(title="Paused", color=0x00ff00)
         emb.description = "Use the `!resume` command to resume the music!"
         await ctx.send(embed=emb)
@@ -437,6 +480,7 @@ class Youtube_Player(commands.Cog):
             return
 
         self.current_voice_client.resume()
+        self.start_time = datetime.datetime.now().timestamp()
         await self.send_play_message(ctx)
 
     # Command to disconnect the bot from the voice channel

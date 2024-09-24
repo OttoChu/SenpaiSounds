@@ -6,18 +6,15 @@ The list ***may change*** between pushes.
 ## Known Bugs
 - Users can use media control even if they are not in the same voice channel
 
+## Volume
+- Change volume of the bot
+- normalize the volume so that all songs are roughly at the same volume
+
 ## Playlist
 - loop playlist
 - edit playlist 
     - remove chosen song
     - move chosen song to different order
-
-## Timestamps
-- add timestamp for songs
-    - e.g (current/total) for the song
-- Fix the total playlist duration
-    - currently it is only counting the playlist
-    - it should also count the rest of the current song as well
 
 ## Roles
 - make the admin commands only works for some roles only (currently disabled)
