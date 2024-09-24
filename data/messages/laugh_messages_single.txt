@@ -1,0 +1,8 @@
+f"{ctx.author.mention} is laughing at themselves"
+f"{ctx.author.mention} is laughing... no one knows why, but it's contagious!"
+f"{ctx.author.mention} can't stop laughing—send help!"
+f"Breaking news: {ctx.author.mention}'s laugh is now a meme!"
+f"Brace yourselves, {ctx.author.mention}'s laughter is incoming"
+f"Nobody: ... \n{ctx.author.mention}: laughs in *high-definition*"
+f"{ctx.author.mention}'s laugh is now the official Discord ringtone!"
+f"Is {ctx.author.mention} laughing... or charging up for an epic fight scene?"

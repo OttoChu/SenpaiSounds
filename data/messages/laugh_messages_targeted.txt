@@ -1,0 +1,12 @@
+f"{ctx.author.mention} just sent a laugh bomb straight to {target.mention}!"
+f"{ctx.author.mention} just gave {target.mention} the gift of uncontrollable laughter!"
+f"{ctx.author.mention} unleashed a laugh that even {target.mention} couldn't dodge!"
+f"{ctx.author.mention} sent a laughter spell to {target.mention}—and it's super effective!"
+f"{ctx.author.mention} just leveled up {target.mention}'s laugh stat!"
+f"{ctx.author.mention} sent a laugh shockwave and {target.mention} was caught in the blast!"
+f"{ctx.author.mention} just launched a laugh grenade at {target.mention}!"
+f"{ctx.author.mention} just triggered {target.mention}'s *Ultimate Laugh Form!*"
+f"{ctx.author.mention} just triggered {target.mention}'s *Ultimate Laugh Form!*
+f"{ctx.author.mention} and {target.mention} are laughing like they're the protagonists of a rom-com anime!""
+f"{ctx.author.mention} hit {target.mention} with a laugh that's crazier than a JoJo's plot twist!"
+f"{ctx.author.mention} used ***Laugh*** on {target.mention}, it did nothing!"

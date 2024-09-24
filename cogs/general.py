@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import discord.ext
-from utils import gif
+from utils import gif, messages
 import random
 
 
@@ -19,24 +19,21 @@ class General(commands.Cog):
     # Command to send a laughing gif
     @commands.command(help="Sends a laughing message and a gif",
                       usage="!laugh <@username>(optional)")
-    async def laugh(self, ctx: commands.Context, person: str = None):
-        """
-        This command sends a laughing gif. 
+    async def laugh(self, ctx: commands.Context, target: str = None):
+        if target == "@everyone" or target == "@here":
+            return
 
-        Usage:
-        - `!laugh`: Laugh without mentioning anyone.
-        - `!laugh @username`: Laugh at the specified user.
-        """
         try:
-            person = await commands.MemberConverter().convert(ctx, str(person))
+            target = await commands.MemberConverter().convert(ctx, str(target))
         except commands.errors.MemberNotFound:
-            person = None
-        if ctx.author == person:
+            target = None
+
+        if ctx.author == target:
             laugh_message = f"{ctx.author.mention} is laughing at themselves"
-        elif person is None:
-            laugh_message = f"{ctx.author.mention} is laughing"
+        elif target is None:
+            laugh_message = eval(messages.get_laugh_message())
         else:
-            laugh_message = f"{ctx.author.mention} is laughing at {person.mention}"
+            laugh_message = eval(messages.get_laugh_message(target))
 
         gif_url = gif.get_gif_laugh()
         if not gif_url:
@@ -44,7 +41,7 @@ class General(commands.Cog):
             embed.description = "GIPHY rate limit exceeded"
             await ctx.send(embed=embed)
         else:
-            embed = discord.Embed(title="Laughing GIF", color=0x00ff00)
+            embed = discord.Embed(title="Laughing Time", color=0x00ff00)
             embed.description = laugh_message
             embed.set_image(url=gif_url)
             await ctx.send(embed=embed)
@@ -52,22 +49,26 @@ class General(commands.Cog):
     # Command to send a slapping gif
     @commands.command(help="Sends a slapping message and a gif",
                       usage="!slap <@username>(optional)")
-    async def slap(self, ctx: commands.Context, person: str = None):
+    async def slap(self, ctx: commands.Context, target: str = None):
+        if target == "@everyone" or target == "@here":
+            return
+
         try:
-            person = await commands.MemberConverter().convert(ctx, str(person))
+            target = await commands.MemberConverter().convert(ctx, str(target))
         except commands.errors.MemberNotFound:
-            person = None
-        if person is None:
-            slap_message = f"{ctx.author.mention} is slapping someone"
-        elif person == self.bot.user:
-            slap_message = f"{ctx.author.mention} is abusing a bot"
-        elif ctx.author == person:
+            target = None
+
+        if target is None:
+            slap_message = eval(messages.get_slap_message())
+        elif ctx.author == target:
             slap_message = f"{ctx.author.mention} is slapping themselves"
+        elif target == self.bot.user:
+            slap_message = f"{ctx.author.mention} is abusing a bot. Shame on you!"
         else:
-            slap_message = f"{ctx.author.mention} is slapping {person.mention}"
+            slap_message = eval(messages.get_slap_message(target))
 
         gif_url = gif.get_gif_slap()
-        embed = discord.Embed(title="Slapping GIF", color=0x00ff00)
+        embed = discord.Embed(title="Slapping Time", color=0x00ff00)
         embed.description = slap_message
         embed.set_image(url=gif_url)
         await ctx.send(embed=embed)
@@ -77,7 +78,7 @@ class General(commands.Cog):
                       usage="!echo <message>")
     async def echo(self, ctx: commands.Context, *, message: str):
         if "I am dumb" in message:
-            await ctx.send(f"{ctx.author.mention} is dumb")
+            await ctx.send(f"{ctx.author.mention} is dumb. I agree.")
             return
         elif "@everyone" in message or "@here" in message:
             return

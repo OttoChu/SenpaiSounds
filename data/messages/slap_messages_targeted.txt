@@ -1,0 +1,11 @@
+f"{ctx.author.mention} slapped {target.mention} so hard, even the sound was impressed!"
+f"{ctx.author.mention} slapped {target.mention} like they were trying to wake them up from a boring Discord call!"
+f"{ctx.author.mention} just slapped {target.mention} so hard, their future children felt it!"
+f"{ctx.author.mention} just slapped {target.mention} harder than a tsundere's confession!"
+f"{ctx.author.mention} just gave {target.mention} a slap worthy of a dramatic anime scene!"
+f"{ctx.author.mention} just slapped {target.mention} into the next dimension!
+f"{ctx.author.mention} just slapped {target.mention} like a senpai noticing their kouhai!"
+f"{ctx.author.mention} slapped {target.mention} for all those *sus* comments they keep making!"
+f"{ctx.author.mention} slapped {target.mention} for watching a *sus* anime episode!"
+f"{ctx.author.mention} gave {target.mention} a slap that would make even Goku proud!"
+f"{ctx.author.mention} used ***Slap*** on {target.mention}, it was very effective!"

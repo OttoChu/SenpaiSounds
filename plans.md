@@ -6,10 +6,6 @@ The list ***may change*** between pushes.
 ## Known Bugs
 - Users can use media control even if they are not in the same voice channel
 
-## Toll features
-- better laugh messages
-- better slap messages
-
 ## Playlist
 - loop playlist
 - edit playlist 
@@ -36,3 +32,4 @@ The list ***may change*** between pushes.
 ## Documentation 
 - write readme
 - mention ffmpeg is used 
+- mention what api are used
