@@ -1,5 +1,5 @@
 # Plans for future updates
-The following features are listed in the order they are being implemented into this project.
+The following features are listed are being implemented into this project.
 
 The list ***may change*** between pushes.
 
@@ -11,12 +11,13 @@ The list ***may change*** between pushes.
 - edit playlist 
     - remove chosen song
     - move chosen song to different order
-- add total duration for the playlist
-- add the time when the user add the song in the playlist
 
-## Media control
-- add button for media control (next, pause and stop)
-- add duration/timestamp for songs
+## Timestamps
+- add timestamp for songs
+    - e.g (current/total) for the song
+- Fix the total playlist duration
+    - currently it is only counting the playlist
+    - it should also count the rest of the current song as well
 
 ## Roles
 - make the admin commands only works for some roles only (currently disabled)

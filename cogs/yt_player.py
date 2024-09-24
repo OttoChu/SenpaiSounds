@@ -5,6 +5,7 @@ import yt_dlp
 from youtubesearchpython import VideosSearch
 from utils.embedded_list import PaginationView
 import random
+import datetime
 
 
 class Youtube_Player(commands.Cog):
@@ -18,7 +19,9 @@ class Youtube_Player(commands.Cog):
         # YouTube downloader settings
         yt_dlp_format_options = {
             'format': 'bestaudio/best', 'noplaylist': True,
-            'default_search': 'ytsearch', 'quiet': True
+            'default_search': 'ytsearch', 'quiet': True,
+            'audioformat': 'mp3', 'is_live': False,
+            'live-from-start': False
         }
         self.ytdlp = yt_dlp.YoutubeDL(yt_dlp_format_options)
 
@@ -52,7 +55,7 @@ class Youtube_Player(commands.Cog):
             return None, None
 
         for result in video_search.result()['result']:
-            if not result.get('isLive', False):
+            if not result.get('isLive', False) and result.get('duration') != None:
                 return result['title'], result['link']
         return None, None
 
@@ -92,8 +95,26 @@ class Youtube_Player(commands.Cog):
         str: The loop status
         '''
         if self.loop_current[0]:
-            return f"This looped by {self.loop_current[1]}"
+            return f"*This looped by {self.loop_current[1]}*"
         return ""
+
+    # Helper function to return formatted time from seconds
+    def get_formatted_time(self, seconds: int) -> str:
+        '''
+        Get the formatted time from seconds
+
+        Parameters:
+        seconds (int): The time in seconds
+
+        Returns:
+        str: The formatted time in HH:MM:SS format (MM:SS if less than an hour)
+        '''
+        seconds = int(seconds)
+        hours = seconds // 3600
+        minutes = (seconds // 60) % 60
+        secs = seconds % 60
+
+        return f"{hours:02}:{minutes:02}:{secs:02}" if hours > 0 else f"{minutes:02}:{secs:02}"
 
     # Helper function to send not in voice channel message
     async def send_not_in_voice_channel_message(self, ctx: commands.Context) -> None:
@@ -115,12 +136,17 @@ class Youtube_Player(commands.Cog):
         Parameters:
         ctx (commands.Context): The context of the command
         '''
-        title, yt_url, _, requester = self.current_song
+        title, yt_url, _, duration, requester, time = self.current_song
+        duration = self.get_formatted_time(duration)
 
         emb = discord.Embed(title=f"Playing", color=0x00ff00)
-        emb.add_field(name="** **", value=f"[{title}]({yt_url})", inline=False)
-        emb.add_field(name="Requested by", value=requester, inline=False)
-        emb.add_field(name="** **", value=self.get_loop_status(), inline=False)
+        emb.add_field(
+            name="** **", value=f"[{title}]({yt_url}) ({duration})", inline=False)
+        emb.add_field(name="Requested by",
+                      value=f"{requester} at {time}", inline=False)
+        if self.loop_current[0]:
+            emb.add_field(
+                name="** **", value=f"{self.get_loop_status()}", inline=False)
         await ctx.send(embed=emb)
 
     # Helper function to send nothing is playing message
@@ -187,7 +213,7 @@ class Youtube_Player(commands.Cog):
             self.reset()
 
     # Command to play music from YouTube
-    @commands.command(help="Play music from YouTube", usage="!play <song_name or YouTube URL>")
+    @commands.command(help="Play music from YouTube", usage="!play <song name / YouTube URL>")
     async def play(self, ctx: commands.Context, *, query: str) -> None:
         # User must be in a voice channel to use this command
         if not ctx.author.voice:
@@ -211,6 +237,10 @@ class Youtube_Player(commands.Cog):
                 audio_url = info['url']
                 title = info['title']
                 yt_url = query
+                duration = info.get('duration')
+                if duration == None:
+                    await ctx.send(f"Livestreams are not supported!\n{ctx.author.mention}, please try another query.")
+                    return
 
             # Video not available on YouTube
             except Exception as e:
@@ -226,11 +256,16 @@ class Youtube_Player(commands.Cog):
             if not title or not yt_url:
                 await ctx.send(f"No results found!\n{ctx.author.mention}, please try another query.")
                 return
+
             info = self.ytdlp.extract_info(yt_url, download=False)
             audio_url = info['url']
+            duration = info['duration']
+
+        time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Add the song to the playlist
-        self.playlist.append((title, yt_url, audio_url, ctx.author.mention))
+        self.playlist.append(
+            (title, yt_url, audio_url, duration, ctx.author.mention, time))
         await wait_message.delete()
 
         # Play the song if nothing is playing
@@ -241,11 +276,12 @@ class Youtube_Player(commands.Cog):
 
         # Add the song to the playlist if something is playing
         else:
+            duration = self.get_formatted_time(duration)
             emb = discord.Embed(title="Added to Playlist", color=0x00ff00)
             emb.add_field(
-                name="** **", value=f"[{title}]({yt_url})", inline=False)
+                name="** **", value=f"[{title}]({yt_url}) ({duration})", inline=False)
             emb.add_field(name="Requested by",
-                          value=ctx.author.mention, inline=False)
+                          value=f"{ctx.author.mention} at {time}", inline=False)
             await ctx.send(embed=emb)
 
     # Command to show the current playlist
@@ -258,17 +294,18 @@ class Youtube_Player(commands.Cog):
             await ctx.send(embed=emb)
             return
 
-        requesters = [song[3] for song in self.playlist]
+        requesters = [song[4] for song in self.playlist]
         song_names = [f"[{song[0]}]({song[1]})" for song in self.playlist]
-        song_with_requester = [f"{i}. {requester} - {song}"
-                               for i, (song, requester) in
-                               enumerate(zip(song_names, requesters), start=1)]
+        durations = [self.get_formatted_time(
+            song[3]) for song in self.playlist]
 
-        title, yt_url, _, requester = self.current_song
+        formatted_song = [f"{i}. {requester} - {song} ({duration})\n"
+                          for i, (song, duration, requester) in
+                          enumerate(zip(song_names, durations, requesters), start=1)]
 
-        description = f"**Currently playing:**\n[{title}]({yt_url})\nRequested by {requester}\n{self.get_loop_status()}"
+        description = f"Songs in playlist: {len(self.playlist)}\nPlaylist duration: {self.get_formatted_time(sum([song[3] for song in self.playlist]))}"
 
-        view = PaginationView(song_with_requester, item_id=None, title="**Playlist**",
+        view = PaginationView(formatted_song, item_id=None, title="Playlist",
                               list_description=description, items_per_page=5)
         emb = view.create_embed()
         await ctx.send(embed=emb, view=view)
@@ -323,7 +360,7 @@ class Youtube_Player(commands.Cog):
             self.loop_current[1] = ctx.author.mention
             emb = discord.Embed(
                 title="Looping the current song", color=0x00ff00)
-            emb.description = f"{self.current_song[0]} will be looped!"
+            emb.description = f"[{self.current_song[0]}]({self.current_song[1]}) will be looped!"
             emb.add_field(
                 name="** **", value="Use the `!loop` command again to stop looping!")
         else:
