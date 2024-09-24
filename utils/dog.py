@@ -1,6 +1,10 @@
 import json
 import urllib.request
 from utils.json_handler import load_breeds
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 
 def get_breeds_keys():
@@ -33,7 +37,7 @@ def get_random_dog():
     tuple: A tuple containing the dog image url and its details
     '''
     # Gets a random dog image
-    with urllib.request.urlopen(f"https://api.thedogapi.com/v1/images/search?") as url:
+    with urllib.request.urlopen(f"https://api.thedogapi.com/v1/images/search?api_key={os.getenv('CAT_TOKEN')}") as url:
         dog = json.loads(url.read().decode())[0]
 
     # Gets the details of the dog
@@ -55,7 +59,7 @@ def get_specific_breed_dog(breed_id):
     '''
     # Gets a random dog image
     try:
-        with urllib.request.urlopen(f"https://api.thedogapi.com/v1/images/search?breed_ids={breed_id}") as url:
+        with urllib.request.urlopen(f"https://api.thedogapi.com/v1/images/search?breed_ids={breed_id}&api_key={os.getenv('CAT_TOKEN')}") as url:
             dog = json.loads(url.read().decode())[0]
     except IndexError:
         return None, None

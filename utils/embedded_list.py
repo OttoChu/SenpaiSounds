@@ -42,7 +42,7 @@ class PaginationView(View):
     def create_embed(self) -> discord.Embed:
         '''
         Create an embed with the items for the current page
-        
+
         Returns:
         discord.Embed: The embed with the items for the current page
         '''
@@ -71,10 +71,11 @@ class PaginationView(View):
         else:
             ids = "\n".join(str(id) for id in self.item_id[start:end])
             names = "\n".join(str(item) for item in items_for_page)
-            
+
             embed.add_field(
                 name=self.id_name if self.id_name else "** **", value=ids, inline=True)
-            embed.add_field(name=self.value_name if self.value_name else "** **", value=names, inline=True)
+            embed.add_field(
+                name=self.value_name if self.value_name else "** **", value=names, inline=True)
             embed.set_footer(
                 text=f"Page {self.page + 1} of {(len(self.item_list) - 1) // self.items_per_page + 1}")
             return embed

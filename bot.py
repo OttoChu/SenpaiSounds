@@ -12,9 +12,15 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def load_extensions():
     await bot.load_extension('cogs.logging')
     await bot.load_extension('cogs.general')
-    await bot.load_extension('cogs.admin')
-    await bot.load_extension('cogs.slash_commands')
+    await bot.load_extension('cogs.dogs')
     await bot.load_extension('cogs.yt_player')
+    await bot.load_extension('cogs.help')
+    await bot.load_extension('cogs.errors')
+
+    # Disable the admin cog for now due to the lack of roles check
+    # await bot.load_extension('cogs.admin')
+
+    bot.remove_command('help')
 
 
 @bot.event

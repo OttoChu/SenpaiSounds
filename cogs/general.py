@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands
 import discord.ext
-from utils.embedded_list import PaginationView
-from utils import dog, gif
+from utils import gif
 import random
 
 
@@ -10,9 +9,24 @@ class General(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    # Command to see the latency of the bot
+    @commands.command(help="Check the bot's latency",
+                      usage="!ping")
+    async def ping(self, ctx: commands.Context):
+        latency = round(self.bot.latency * 1000)
+        await ctx.send(f"Pong! {latency}ms")
+
     # Command to send a laughing gif
-    @commands.command()
+    @commands.command(help="Sends a laughing message and a gif",
+                      usage="!laugh <@username>(optional)")
     async def laugh(self, ctx: commands.Context, person: str = None):
+        """
+        This command sends a laughing gif. 
+
+        Usage:
+        - `!laugh`: Laugh without mentioning anyone.
+        - `!laugh @username`: Laugh at the specified user.
+        """
         try:
             person = await commands.MemberConverter().convert(ctx, str(person))
         except commands.errors.MemberNotFound:
@@ -36,7 +50,8 @@ class General(commands.Cog):
             await ctx.send(embed=embed)
 
     # Command to send a slapping gif
-    @commands.command()
+    @commands.command(help="Sends a slapping message and a gif",
+                      usage="!slap <@username>(optional)")
     async def slap(self, ctx: commands.Context, person: str = None):
         try:
             person = await commands.MemberConverter().convert(ctx, str(person))
@@ -58,58 +73,23 @@ class General(commands.Cog):
         await ctx.send(embed=embed)
 
     # Command to echo the message
-    @commands.command()
+    @commands.command(help="Repeats the message",
+                      usage="!echo <message>")
     async def echo(self, ctx: commands.Context, *, message: str):
+        if "I am dumb" in message:
+            await ctx.send(f"{ctx.author.mention} is dumb")
+            return
         await ctx.send("".join(message))
 
     # Command to roll a dice
-    @commands.command()
+    @commands.command(help="Roll a dice with 6 sides by default",
+                      usage="!roll_dice <number_of_dice>(optional) <number_of_sides>(optional)")
     async def roll_dice(self, ctx: commands.Context, number_of_dice: int = 1, number_of_sides: int = 6):
         dice = [
             str(random.choice(range(1, number_of_sides + 1)))
             for _ in range(number_of_dice)
         ]
         await ctx.send(", ".join(dice))
-
-    # Command to send a random dog image and its details (if available)
-    @commands.command()
-    async def dog(self, ctx: commands.Context, breed_id: int = None):
-        if breed_id:
-            pic_url, pic_detail = dog.get_specific_breed_dog(breed_id)
-            if not pic_url:
-                await ctx.send("Breed not found!")
-                return
-        else:
-            pic_url, pic_detail = dog.get_random_dog()
-
-        emb = discord.Embed(title="A dog has been summoned!", color=0x00ff00)
-        emb.set_image(url=pic_url)
-
-        breed_fields = {
-            "Breed": "name",
-            "Bred For": "bred_for",
-            "Description": "description",
-            "Temperament": "temperament",
-            "Life Span": "life_span"
-        }
-
-        breed_info = pic_detail.get('breeds', [{}])[0]
-        for field_name, key in breed_fields.items():
-            if key in breed_info:
-                emb.add_field(name=field_name,
-                              value=breed_info[key], inline=False)
-
-        emb.set_footer(text=f"Requested by {ctx.author.name}")
-        await ctx.send(embed=emb)
-
-    # Command to list all dog breeds
-    @commands.command()
-    async def dogs(self, ctx: commands.Context):
-        view = PaginationView(dog.get_breeds_keys(), dog.get_breeds_value(),
-                              "Dog Breeds", "Some IDs are missing due to API limitations",
-                              "Breed ID", "Breed Name")
-        embed = view.create_embed()
-        await ctx.send(embed=embed, view=view)
 
 
 async def setup(bot: commands.Bot) -> None:

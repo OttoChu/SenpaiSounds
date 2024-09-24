@@ -187,7 +187,7 @@ class Youtube_Player(commands.Cog):
             self.reset()
 
     # Command to play music from YouTube
-    @commands.command()
+    @commands.command(help="Play music from YouTube", usage="!play <song_name or YouTube URL>")
     async def play(self, ctx: commands.Context, *, query: str) -> None:
         # User must be in a voice channel to use this command
         if not ctx.author.voice:
@@ -249,7 +249,7 @@ class Youtube_Player(commands.Cog):
             await ctx.send(embed=emb)
 
     # Command to show the current playlist
-    @commands.command()
+    @commands.command(help="Show the current playlist", usage="!playlist")
     async def playlist(self, ctx: commands.Context) -> None:
         if not self.playlist:
             emb = discord.Embed(title="Nothing else is in the playlist",
@@ -274,7 +274,7 @@ class Youtube_Player(commands.Cog):
         await ctx.send(embed=emb, view=view)
 
     # Command to clear the playlist
-    @commands.command()
+    @commands.command(help="Clear the current playlist", usage="!clear")
     async def clear(self, ctx: commands.Context) -> None:
         self.playlist = []
         emb = discord.Embed(title="Playlist cleared", color=0x00ff00)
@@ -282,7 +282,7 @@ class Youtube_Player(commands.Cog):
         await ctx.send(embed=emb)
 
     # Command to shuffle the playlist
-    @commands.command()
+    @commands.command(help="Shuffle the current playlist", usage="!shuffle")
     async def shuffle(self, ctx: commands.Context) -> None:
         if not self.playlist:
             emb = discord.Embed(title="Nothing to shuffle", color=0xff0000)
@@ -296,7 +296,7 @@ class Youtube_Player(commands.Cog):
         await ctx.send(embed=emb)
 
     # Command to show the current song
-    @commands.command()
+    @commands.command(help="Show the current song", usage="!playing")
     async def playing(self, ctx: commands.Context) -> None:
         if not self.current_voice_client:
             await self.send_not_in_voice_channel_message(ctx)
@@ -308,7 +308,7 @@ class Youtube_Player(commands.Cog):
         await self.send_play_message(ctx)
 
     # Command to loop the current song
-    @commands.command()
+    @commands.command(help="Loop the current song", usage="!loop")
     async def loop(self, ctx: commands.Context) -> None:
         if not self.current_voice_client:
             await self.send_not_in_voice_channel_message(ctx)
@@ -333,7 +333,7 @@ class Youtube_Player(commands.Cog):
         await ctx.send(embed=emb)
 
     # Command to skip the current song
-    @commands.command()
+    @commands.command(help="Skip the current song", usage="!skip")
     async def skip(self, ctx: commands.Context) -> None:
         if not self.current_voice_client:
             await self.send_not_in_voice_channel_message(ctx)
@@ -360,7 +360,7 @@ class Youtube_Player(commands.Cog):
             await ctx.send(embed=emb)
 
     # Command to stop the music
-    @commands.command()
+    @commands.command(help="Stop the music", usage="!stop")
     async def stop(self, ctx: commands.Context) -> None:
         if not self.current_voice_client:
             await self.send_not_in_voice_channel_message(ctx)
@@ -375,7 +375,7 @@ class Youtube_Player(commands.Cog):
         await ctx.send(embed=emb)
 
     # Command to pause the music
-    @commands.command()
+    @commands.command(help="Pause the music", usage="!pause")
     async def pause(self, ctx: commands.Context) -> None:
         if not self.current_voice_client:
             await self.send_not_in_voice_channel_message(ctx)
@@ -390,7 +390,7 @@ class Youtube_Player(commands.Cog):
         await ctx.send(embed=emb)
 
     # Command to resume the music
-    @commands.command()
+    @commands.command(help="Resume the music", usage="!resume")
     async def resume(self, ctx: commands.Context) -> None:
         if not self.current_voice_client:
             await self.send_not_in_voice_channel_message(ctx)
@@ -403,7 +403,7 @@ class Youtube_Player(commands.Cog):
         await self.send_play_message(ctx)
 
     # Command to disconnect the bot from the voice channel
-    @commands.command()
+    @commands.command(help="Disconnect the bot from the voice channel", usage="!disconnect")
     async def disconnect(self, ctx: commands.Context) -> None:
         if self.current_voice_client is None:
             await self.send_not_in_voice_channel_message(ctx)

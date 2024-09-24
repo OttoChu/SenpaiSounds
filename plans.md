@@ -6,6 +6,10 @@ The list ***may change*** between pushes.
 ## Known Bugs
 - Users can use media control even if they are not in the same voice channel
 
+## Toll features
+- better laugh messages
+- better slap messages
+
 ## Playlist
 - loop playlist
 - edit playlist 
@@ -19,11 +23,7 @@ The list ***may change*** between pushes.
 - add duration/timestamp for songs
 
 ## Roles
-- make the admin commands only works for some roles only
-
-## Quality of life
-- better help function for usability
-- add error messages to assist the user (missing/wrong parameters)
+- make the admin commands only works for some roles only (currently disabled)
 
 ## Database
 - save playlist to be used later
