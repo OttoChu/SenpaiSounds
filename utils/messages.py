@@ -24,10 +24,10 @@ def get_laugh_message(target: discord.Member = None) -> str:
     str: The laugh message
     '''
     if target:
-        with open("./data/messages/laugh_messages_targeted.txt", "r") as f:
+        with open(".//data/messages//laugh_messages_targeted.txt", "r") as f:
             return choice([line.strip() for line in f])
 
-    with open("./data/messages/laugh_messages_single.txt", "r") as f:
+    with open(".//data//messages//laugh_messages_single.txt", "r") as f:
         return choice([line.strip() for line in f])
 
 
