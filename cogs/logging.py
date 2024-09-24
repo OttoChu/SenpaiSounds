@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands, tasks
-from utils.annoying_messages import get_annoying_messages
+from utils.messages import get_annoying_messages
 from random import choice
 
 

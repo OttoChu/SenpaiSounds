@@ -79,6 +79,8 @@ class General(commands.Cog):
         if "I am dumb" in message:
             await ctx.send(f"{ctx.author.mention} is dumb")
             return
+        elif "@everyone" in message or "@here" in message:
+            return
         await ctx.send("".join(message))
 
     # Command to roll a dice
