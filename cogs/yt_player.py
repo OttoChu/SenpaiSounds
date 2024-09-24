@@ -105,7 +105,7 @@ class Youtube_Player(commands.Cog):
         str: The loop status
         '''
         if self.loop_current[0]:
-            return f"*This looped by {self.loop_current[1]}*"
+            return f"*This song is looped by {self.loop_current[1]}*"
         return ""
 
     # Helper function to return formatted time from seconds
