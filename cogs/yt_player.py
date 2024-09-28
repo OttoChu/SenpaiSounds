@@ -18,6 +18,7 @@ class Youtube_Player(commands.Cog):
         self.loop_current = [False, None]
         self.start_time = 0
         self.time_passed = 0
+        self.disconnect_timer_task = None
 
         # YouTube downloader settings
         yt_dlp_format_options = {
@@ -40,6 +41,7 @@ class Youtube_Player(commands.Cog):
         self.loop_current = [False, None]
         self.start_time = 0
         self.time_passed = 0
+        self.disconnect_timer_task = None
 
     # Helper function to search for a video on YouTube
 
@@ -195,7 +197,15 @@ class Youtube_Player(commands.Cog):
         '''
         if error:
             print(f"An error occurred: {error}")
-
+            emb = discord.Embed(title="An error occurred", color=0xff0000)
+            emb.description = "An error occurred that the developer didn't account for.\nPlease contact the developer with the error message below and the command you ran."
+            emb.add_field(name="** **", value=error)
+            asyncio.run_coroutine_threadsafe(
+                self.current_ctx.send(embed=emb),
+                self.bot.loop
+            )
+            return
+        
         # Loop the current song if the loop flag is set
         if self.loop_current[0]:
             self.playlist.insert(0, self.current_song)
@@ -223,18 +233,25 @@ class Youtube_Player(commands.Cog):
     async def auto_disconnect(self) -> None:
         '''
         Disconnect the bot from the voice channel if no music is playing
-        after 10 minutes
+        after 5 minutes
         '''
-        await asyncio.sleep(600)
-        if (not self.current_voice_client.is_playing()
-            and not self.current_song
-                and not self.current_voice_client):
-            await self.current_voice_client.disconnect()
-            emb = discord.Embed(
-                title=f"Disconnected form {self.current_voice_client.channel.name}", color=0xff0000)
-            emb.description = f"Call me back with the `!play song_name` command!"
-            await self.current_ctx.send(embed=emb)
-            self.reset()
+        # only one timer task should be running at a time
+        if self.disconnect_timer_task:
+            return
+        
+        async def disconnect_after_timeout():
+            await asyncio.sleep(300)
+            if (not self.current_voice_client.is_playing()
+                and self.current_song is None
+                and self.current_voice_client is not None):
+                await self.current_voice_client.disconnect()
+                emb = discord.Embed(
+                    title=f"Disconnected due to inactivity", color=0xff0000)
+                emb.description = f"Call me back with the `!play song_name` command!"
+                await self.current_ctx.send(embed=emb)
+                self.reset()
+
+        self.disconnect_timer_task = self.bot.loop.create_task(disconnect_after_timeout())
 
     # Command to play music from YouTube
     @commands.command(help="Play music from YouTube", usage="!play <song name / YouTube URL>")
@@ -290,11 +307,11 @@ class Youtube_Player(commands.Cog):
         # Add the song to the playlist
         self.playlist.append(
             (title, yt_url, audio_url, duration, ctx.author.mention, time))
-        await wait_message.delete()
 
         # Play the song if nothing is playing
         if not self.current_voice_client.is_playing():
             self.current_song = self.playlist.pop(0)
+            await wait_message.delete()
             await self.play_sound(self.current_song[2])
             await self.send_play_message(ctx)
 
@@ -306,6 +323,7 @@ class Youtube_Player(commands.Cog):
                 name="** **", value=f"[{title}]({yt_url}) ({duration})", inline=False)
             emb.add_field(name="Requested by",
                           value=f"{ctx.author.mention} at {time}", inline=False)
+            await wait_message.delete()
             await ctx.send(embed=emb)
 
     # Command to show the current playlist

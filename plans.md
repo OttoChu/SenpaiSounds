@@ -6,6 +6,10 @@ The list ***may change*** between pushes.
 ## Known Bugs
 - Users can use media control even if they are not in the same voice channel
 
+## Adding new songs
+- Allow users to add whole playlist to the bot
+    - youtube playlists but not livestreams?
+
 ## Volume
 - Change volume of the bot
 - normalize the volume so that all songs are roughly at the same volume
