@@ -2,8 +2,8 @@ import asyncio
 import discord
 from discord.ext import commands
 import yt_dlp
-from youtubesearchpython import VideosSearch
 from utils.embedded_list import PaginationView
+from utils.youtube_search import search_query, search_random
 import random
 import datetime
 
@@ -42,30 +42,6 @@ class Youtube_Player(commands.Cog):
         self.start_time = 0
         self.time_passed = 0
         self.disconnect_timer_task = None
-
-    # Helper function to search for a video on YouTube
-
-    def search_youtube(self, query: str) -> tuple:
-        '''
-        Search for a video on YouTube and return the title and URL of the 
-        first result
-
-        Parameters:
-        query (str): The search query
-
-        Returns:
-        title (str): The title of the video
-        url (str): The URL of the video
-        '''
-        try:
-            video_search = VideosSearch(str(query), limit=5)
-        except Exception:
-            return None, None
-
-        for result in video_search.result()['result']:
-            if not result.get('isLive', False) and result.get('duration') != None:
-                return result['title'], result['link']
-        return None, None
 
     # Helper function to play sound from a URL
     async def play_sound(self, url: str) -> None:
@@ -205,7 +181,7 @@ class Youtube_Player(commands.Cog):
                 self.bot.loop
             )
             return
-        
+
         # Loop the current song if the loop flag is set
         if self.loop_current[0]:
             self.playlist.insert(0, self.current_song)
@@ -238,12 +214,12 @@ class Youtube_Player(commands.Cog):
         # only one timer task should be running at a time
         if self.disconnect_timer_task:
             return
-        
+
         async def disconnect_after_timeout():
             await asyncio.sleep(300)
             if (not self.current_voice_client.is_playing()
                 and self.current_song is None
-                and self.current_voice_client is not None):
+                    and self.current_voice_client is not None):
                 await self.current_voice_client.disconnect()
                 emb = discord.Embed(
                     title=f"Disconnected due to inactivity", color=0xff0000)
@@ -251,11 +227,12 @@ class Youtube_Player(commands.Cog):
                 await self.current_ctx.send(embed=emb)
                 self.reset()
 
-        self.disconnect_timer_task = self.bot.loop.create_task(disconnect_after_timeout())
+        self.disconnect_timer_task = self.bot.loop.create_task(
+            disconnect_after_timeout())
 
     # Command to play music from YouTube
-    @commands.command(help="Play music from YouTube", usage="!play <song name / YouTube URL>")
-    async def play(self, ctx: commands.Context, *, query: str) -> None:
+    @commands.command(help="Play music from YouTube", usage="!play\n!play <song name / YouTube URL>")
+    async def play(self, ctx: commands.Context, *, query: str = None) -> None:
         # User must be in a voice channel to use this command
         if not ctx.author.voice:
             await ctx.send(f"{ctx.author.mention}, you need to be in a voice channel to use this command!")
@@ -271,8 +248,27 @@ class Youtube_Player(commands.Cog):
         # Extract audio stream URL without downloading
         wait_message = await ctx.send("Fetching the audio...")
 
+        # Check if the user provided a query
+        if not query:
+            title, yt_url = await search_random()
+            info = self.ytdlp.extract_info(yt_url, download=False)
+            audio_url = info['url']
+            duration = info.get('duration')
+            
+            # Check if the query is a valid song
+            if not title or not yt_url or not audio_url:
+                await wait_message.delete()
+                await ctx.send(f"Failed to fetch a random song!\n{ctx.author.mention}, please try again.")
+                return
+
+            # Check if the song is a livestream
+            if duration == None:
+                await wait_message.delete()
+                await ctx.send(f"Livestreams are not supported!\n{ctx.author.mention}, please try another query.")
+                return
+            
         # Check if the query is a YouTube URL
-        if "https://www.youtube.com/watch?v=" in query:
+        elif "https://www.youtube.com/watch?v=" in query:
             try:
                 info = self.ytdlp.extract_info(query, download=False)
                 audio_url = info['url']
@@ -293,7 +289,7 @@ class Youtube_Player(commands.Cog):
                 return
 
         else:
-            title, yt_url = self.search_youtube(query)
+            title, yt_url = search_query(query)
             if not title or not yt_url:
                 await ctx.send(f"No results found!\n{ctx.author.mention}, please try another query.")
                 return
@@ -301,6 +297,10 @@ class Youtube_Player(commands.Cog):
             info = self.ytdlp.extract_info(yt_url, download=False)
             audio_url = info['url']
             duration = info['duration']
+            if duration == None:
+                await wait_message.delete()
+                await ctx.send(f"Livestreams are not supported!\n{ctx.author.mention}, please try another query.")
+                return
 
         time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -340,11 +340,11 @@ class Youtube_Player(commands.Cog):
             self.start_time + self.time_passed
         self.start_time = datetime.datetime.now().timestamp()
         time_left = self.current_song[3] - self.time_passed
-        total_time = self.get_formatted_time(sum([song[3] for song in self.playlist]) + time_left)
-        
+        total_time = self.get_formatted_time(
+            sum([song[3] for song in self.playlist]) + time_left)
+
         requesters = [song[4] for song in self.playlist]
         song_names = [f"[{song[0]}]({song[1]})" for song in self.playlist]
-
 
         durations = [self.get_formatted_time(
             song[3]) for song in self.playlist]
@@ -352,7 +352,7 @@ class Youtube_Player(commands.Cog):
         formatted_song = [f"{i}. {requester} - {song} ({duration})\n"
                           for i, (song, duration, requester) in
                           enumerate(zip(song_names, durations, requesters), start=1)]
-        
+
         # duration of the current song is not accurate if it is looped
         if self.loop_current[0]:
             loop_message = "*(Not accurate as the current song is looped)*"

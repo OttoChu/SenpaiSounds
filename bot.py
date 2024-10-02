@@ -13,7 +13,7 @@ async def load_extensions():
     await bot.load_extension('cogs.logging')
     await bot.load_extension('cogs.general')
     await bot.load_extension('cogs.dogs')
-    await bot.load_extension('cogs.yt_player')
+    await bot.load_extension('cogs.music_player')
     await bot.load_extension('cogs.help')
     await bot.load_extension('cogs.errors')
 
