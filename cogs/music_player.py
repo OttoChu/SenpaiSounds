@@ -22,10 +22,24 @@ class Youtube_Player(commands.Cog):
 
         # YouTube downloader settings
         yt_dlp_format_options = {
-            'format': 'bestaudio/best', 'noplaylist': True,
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
             'default_search': 'ytsearch', 'quiet': True,
             'audioformat': 'mp3', 'is_live': False,
-            'live-from-start': False
+            'live-from-start': False,
+
+            'extractor-args': 'youtube:skip=bypass',
+            'skip_download': True,  # Ensures no download happens
+            'nocheckcertificate': True,  # In case SSL slows down the process
+            'force_generic_extractor': True,  # Use generic to speed up for playlists
+            'youtube_include_dash_manifest': False,  # Skip DASH manifest to reduce time
+            'extract_flat': 'in_playlist'  # Extract all videos in the playlist
+
+
         }
         self.ytdlp = yt_dlp.YoutubeDL(yt_dlp_format_options)
 
@@ -103,6 +117,58 @@ class Youtube_Player(commands.Cog):
         secs = seconds % 60
 
         return f"{hours:02}:{minutes:02}:{secs:02}" if hours > 0 else f"{minutes:02}:{secs:02}"
+
+    # Helper function to add a song to the playlist
+    async def add_single_to_playlist(self, ctx: commands.Context, entry: dict) -> None:
+        '''
+        Add a song to the playlist
+
+        Parameters:
+        ctx (commands.Context): The context of the command
+        entry (dict): The dictionary containing the song information
+
+        Returns:
+        bool: True if the song was added to the playlist, False otherwise
+        '''
+        audio_url = entry['url']
+        title = entry['title']
+        yt_url = entry['webpage_url']
+        duration = entry.get('duration')
+
+        if duration == None:
+            await ctx.send(f"Livestreams are not supported!\n{ctx.author.mention}, please try another query.")
+            return False
+
+        time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.playlist.append(
+            (title, yt_url, audio_url, duration, ctx.author.mention, time))
+        return True
+    
+    # Helper function to add multiple songs to the playlist
+    async def add_multi_to_playlist(self, ctx: commands.Context, entry: dict) -> None:
+        '''
+        Add multiple songs to the playlist
+
+        Parameters:
+        ctx (commands.Context): The context of the command
+        entry (dict): The dictionary containing the song information
+        '''
+
+        title = entry['title']
+        yt_url = entry['url']
+        duration = entry.get('duration')
+        
+        if duration == None:
+            await ctx.send(f"Livestreams are not supported!\n{ctx.author.mention}, please try another query.")
+            return False
+        
+        info = self.ytdlp.extract_info(yt_url, download=False)
+        audio_url = info.get('url')
+
+        time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.playlist.append(
+            (title, yt_url, audio_url, duration, ctx.author.mention, time))
+        return True
 
     # Helper function to send not in voice channel message
     async def send_not_in_voice_channel_message(self, ctx: commands.Context) -> None:
@@ -247,47 +313,55 @@ class Youtube_Player(commands.Cog):
 
         # Extract audio stream URL without downloading
         wait_message = await ctx.send("Fetching the audio...")
+        add_playlist = False
 
         # Check if the user provided a query
         if not query:
-            title, yt_url = await search_random()
-            info = self.ytdlp.extract_info(yt_url, download=False)
-            audio_url = info['url']
-            duration = info.get('duration')
-            
-            # Check if the query is a valid song
-            if not title or not yt_url or not audio_url:
-                await wait_message.delete()
-                await ctx.send(f"Failed to fetch a random song!\n{ctx.author.mention}, please try again.")
-                return
-
-            # Check if the song is a livestream
-            if duration == None:
-                await wait_message.delete()
-                await ctx.send(f"Livestreams are not supported!\n{ctx.author.mention}, please try another query.")
-                return
-            
-        # Check if the query is a YouTube URL
-        elif "https://www.youtube.com/watch?v=" in query:
-            try:
-                info = self.ytdlp.extract_info(query, download=False)
+            while True:
+                title, yt_url = await search_random()
+                info = self.ytdlp.extract_info(yt_url, download=False)
                 audio_url = info['url']
-                title = info['title']
-                yt_url = query
                 duration = info.get('duration')
-                if duration == None:
-                    await ctx.send(f"Livestreams are not supported!\n{ctx.author.mention}, please try another query.")
+                if title and yt_url and audio_url and duration:
+                    time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    self.playlist.append(
+                        (title, yt_url, audio_url, duration, ctx.author.mention, time))
+                    break
+
+        # Adding songs with YouTube URLs
+        elif "https://www.youtube.com/watch?v=" in query:
+            # Adding Youtube playlist
+            if "list=" in query:
+                add_playlist = True
+                info = self.ytdlp.extract_info(query, download=False)
+
+                # Adding the first song to the playlist the rest will be added later
+                # to avoid the long wait time
+                first_song = info['entries'].pop(0)
+                if not await self.add_multi_to_playlist(ctx, first_song):
+                    await wait_message.delete()
+                    await ctx.send(f"Song not added to the playlist!")
+                    return
+                            
+            # Adding a single song with a YouTube URL
+            else:
+                try:
+                    info = self.ytdlp.extract_info(query, download=False)
+                    if not await self.add_single_to_playlist(ctx, info):
+                        await wait_message.delete()
+                        await ctx.send(f"Song not added to the playlist!")
+                        return
+
+                # Video not available on YouTube
+                except Exception as e:
+                    await wait_message.delete()
+                    if e == yt_dlp.utils.DownloadError:
+                        await ctx.send(f"Video not available on YouTube!\n{ctx.author.mention}, please try another query.")
+                    else:
+                        await ctx.send(f"The URL maybe invalid or truncated!\n{ctx.author.mention}, please try another query.")
                     return
 
-            # Video not available on YouTube
-            except Exception as e:
-                await wait_message.delete()
-                if e == yt_dlp.utils.DownloadError:
-                    await ctx.send(f"Video not available on YouTube!\n{ctx.author.mention}, please try another query.")
-                else:
-                    await ctx.send(f"The URL maybe invalid or truncated!\n{ctx.author.mention}, please try another query.")
-                return
-
+        # Search for a song with the query
         else:
             title, yt_url = search_query(query)
             if not title or not yt_url:
@@ -295,18 +369,10 @@ class Youtube_Player(commands.Cog):
                 return
 
             info = self.ytdlp.extract_info(yt_url, download=False)
-            audio_url = info['url']
-            duration = info['duration']
-            if duration == None:
+            if not await self.add_single_to_playlist(ctx, info):
                 await wait_message.delete()
-                await ctx.send(f"Livestreams are not supported!\n{ctx.author.mention}, please try another query.")
+                await ctx.send(f"Song not added to the playlist!")
                 return
-
-        time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # Add the song to the playlist
-        self.playlist.append(
-            (title, yt_url, audio_url, duration, ctx.author.mention, time))
 
         # Play the song if nothing is playing
         if not self.current_voice_client.is_playing():
@@ -317,13 +383,29 @@ class Youtube_Player(commands.Cog):
 
         # Add the song to the playlist if something is playing
         else:
+            title, yt_url, audio_url, duration, requester, time = self.playlist[-1]
             duration = self.get_formatted_time(duration)
             emb = discord.Embed(title="Added to Playlist", color=0x00ff00)
             emb.add_field(
                 name="** **", value=f"[{title}]({yt_url}) ({duration})", inline=False)
             emb.add_field(name="Requested by",
-                          value=f"{ctx.author.mention} at {time}", inline=False)
+                          value=f"{requester} at {time}", inline=False)
             await wait_message.delete()
+            await ctx.send(embed=emb)
+
+        # Adding the rest of the playlist if a playlist was added
+        # 3 songs at a time to avoid timeout
+        if add_playlist:
+            chunk_size = 3
+            for i in range(0, len(info['entries']), chunk_size):
+                tasks = []
+                chunk = info['entries'][i:i+chunk_size]
+                for entry in chunk:
+                    tasks.append(self.add_multi_to_playlist(ctx, entry))
+
+                await asyncio.gather(*tasks)
+            emb = discord.Embed(title="Added the rest of the playlist", color=0x00ff00)
+            emb.description = "Use the `!playlist` command to see the new order!"
             await ctx.send(embed=emb)
 
     # Command to show the current playlist

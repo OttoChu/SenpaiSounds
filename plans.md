@@ -5,20 +5,21 @@ The list ***may change*** between pushes.
 
 ## Known Bugs
 - Users can use media control even if they are not in the same voice channel
+- Adding new song while already playing a song makes the audio cut for a second (make them async)
 
 ## Adding new songs
-- Allow users to add whole playlist to the bot
-    - youtube playlists but not livestreams?
-
-## Volume
-- Change volume of the bot
-- normalize the volume so that all songs are roughly at the same volume
+- Add playlists from Spotify? 
+    - will need to look into SPotify API
 
 ## Playlist
 - loop playlist
 - edit playlist 
     - remove chosen song
     - move chosen song to different order
+
+## Lyrics
+- Add lyrics
+    - maybe using `Genius API`
 
 ## Roles
 - make the admin commands only works for some roles only (currently disabled)
@@ -27,6 +28,10 @@ The list ***may change*** between pushes.
 - save playlist to be used later
 - show saved playlists
 - play saved playlist
+
+## Soundboard
+- Users can upload files/links for sound effects
+- Play them through a command
 
 ## Visual
 - better button look (grey out if the button doesn't work instead of loop)
