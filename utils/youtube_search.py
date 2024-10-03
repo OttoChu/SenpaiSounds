@@ -63,3 +63,61 @@ async def search_random() -> tuple:
     except Exception as e:
         print(f"Failed to fetch random video: {e}")
         return None, None
+    
+
+def get_playlist_length(playlist_url: str, limit: int = 50) -> int:
+    '''
+    Get the length of a playlist
+
+    Parameters:
+    playlist_url (str): The URL of the playlist
+
+    Returns:
+    length (int): The number of videos in the playlist
+    '''
+    playlist_id = playlist_url.split('list=')[1]
+    url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={playlist_id}&maxResults={limit}&key={os.getenv('YOUTUBE_API_KEY')}"
+
+    try:
+        with urllib.request.urlopen(url) as response:
+            if response.status == 200:
+                data = json.loads(response.read())
+                return data['pageInfo']['totalResults']
+            elif response.status == 403:
+                print("API key quota exceeded")
+                return 0
+            return 0
+    except Exception as e:
+        print(f"Failed to fetch playlist length: {e}")
+        return 0
+    
+def get_playlist_song_urls(playlist_url: str, limit: int) -> list:
+    '''
+    Get the URLs of all the songs in a playlist
+
+    Parameters:
+    playlist_url (str): The URL of the playlist
+    limit (int): The maximum number of songs to fetch
+
+    Returns:
+    urls (list): A list of URLs of the songs in the playlist
+    '''
+    playlist_id = playlist_url.split('list=')[1]
+    url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={playlist_id}&maxResults={limit+1}&key={os.getenv('YOUTUBE_API_KEY')}"
+
+    try:
+        with urllib.request.urlopen(url) as response:
+            if response.status == 200:
+                data = json.loads(response.read())
+                urls = []
+                for item in data['items']:
+                    video_id = item['snippet']['resourceId']['videoId']
+                    urls.append(f"https://www.youtube.com/watch?v={video_id}")
+                return urls
+            elif response.status == 403:
+                print("API key quota exceeded")
+                return []
+            return []
+    except Exception as e:
+        print(f"Failed to fetch playlist song URLs: {e}")
+        return []

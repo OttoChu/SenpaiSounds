@@ -5,17 +5,16 @@ The list ***may change*** between pushes.
 
 ## Known Bugs
 - Users can use media control even if they are not in the same voice channel
-- Adding new song while already playing a song makes the audio cut for a second (make them async)
-
-## Adding new songs
-- Add playlists from Spotify? 
-    - will need to look into SPotify API
+- Disconnecting the bot while having operation(s) running in the background causes undesirable behaviours 
+    - Example: Disconnecting when already adding playlist
 
 ## Playlist
 - loop playlist
 - edit playlist 
     - remove chosen song
     - move chosen song to different order
+- Add playlists from Spotify? 
+    - will need to look into SPotify API
 
 ## Lyrics
 - Add lyrics

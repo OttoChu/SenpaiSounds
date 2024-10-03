@@ -1,15 +1,17 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import discord
 from discord.ext import commands
 import yt_dlp
 from utils.embedded_list import PaginationView
-from utils.youtube_search import search_query, search_random
+from utils.youtube_search import *
 import random
 import datetime
 
 
 class Youtube_Player(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
+        self.MAX_ADD_PLAYLIST_SIZE = 20
         self.bot = bot
         self.playlist = []
         self.current_song = None
@@ -19,31 +21,30 @@ class Youtube_Player(commands.Cog):
         self.start_time = 0
         self.time_passed = 0
         self.disconnect_timer_task = None
+        self.executor = ThreadPoolExecutor(max_workers=8)
 
         # YouTube downloader settings
         yt_dlp_format_options = {
-            'format': 'bestaudio/best',
+            'format': 'bestaudio/best',  # Choose the best audio format
             'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
+                'key': 'FFmpegExtractAudio',  # Extract audio
+                'preferredcodec': 'mp3',  # Use mp3 format for audio
+                'preferredquality': '192',  # Use 192 kbps quality
             }],
-            'default_search': 'ytsearch', 'quiet': True,
-            'audioformat': 'mp3', 'is_live': False,
-            'live-from-start': False,
-
-            'extractor-args': 'youtube:skip=bypass',
+            'default_search': 'ytsearch',  # Use ytsearch for search queries
+            'quiet': True,  # Suppress console output
+            'audioformat': 'mp3',  # Use mp3 format for audio
+            'is_live': False, 'live-from-start': False,  # Skip live streams
+            'extractor-args': 'youtube:skip=bypass',  # Skip age-gate
             'skip_download': True,  # Ensures no download happens
             'nocheckcertificate': True,  # In case SSL slows down the process
             'force_generic_extractor': True,  # Use generic to speed up for playlists
-            'youtube_include_dash_manifest': False,  # Skip DASH manifest to reduce time
             'extract_flat': 'in_playlist'  # Extract all videos in the playlist
-
-
         }
         self.ytdlp = yt_dlp.YoutubeDL(yt_dlp_format_options)
 
     # Helper function to reset the player
+
     def reset(self) -> None:
         '''
         Reset the player
@@ -56,6 +57,21 @@ class Youtube_Player(commands.Cog):
         self.start_time = 0
         self.time_passed = 0
         self.disconnect_timer_task = None
+
+    # Helper function to run blocking code in an executor
+    async def run_in_executor(self, func, *args) -> any:
+        '''
+        Helper method to run blocking code in an executor
+
+        Parameters:
+        func (function): The function to run
+        *args: The arguments to pass to the function
+
+        Returns:
+        Any: The result of the function
+        '''
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(self.executor, func, *args)
 
     # Helper function to play sound from a URL
     async def play_sound(self, url: str) -> None:
@@ -78,15 +94,16 @@ class Youtube_Player(commands.Cog):
             url = "data/music.mp3"
             ffmpeg_options = {'options': '-vn'}
 
-        # Stream audio using discord's built-in support for audio URLs
-        source = discord.FFmpegPCMAudio(url, executable="utils/ffmpeg/bin/ffmpeg.exe",
-                                        **ffmpeg_options)
+        def play_audio():
+            # Stream audio using discord's built-in support for audio URLs
+            source = discord.FFmpegPCMAudio(url, executable="utils/ffmpeg/bin/ffmpeg.exe",
+                                            **ffmpeg_options)
+            self.current_voice_client.play(source, after=self.after_playing)
 
+        await self.run_in_executor(play_audio)
         # Track the time the song started playing
         self.start_time = datetime.datetime.now().timestamp()
         self.time_passed = 0
-
-        self.current_voice_client.play(source, after=self.after_playing)
 
     # Helper function to return loop status
     def get_loop_status(self) -> str:
@@ -143,7 +160,7 @@ class Youtube_Player(commands.Cog):
         self.playlist.append(
             (title, yt_url, audio_url, duration, ctx.author.mention, time))
         return True
-    
+
     # Helper function to add multiple songs to the playlist
     async def add_multi_to_playlist(self, ctx: commands.Context, entry: dict) -> None:
         '''
@@ -157,12 +174,12 @@ class Youtube_Player(commands.Cog):
         title = entry['title']
         yt_url = entry['url']
         duration = entry.get('duration')
-        
+
         if duration == None:
             await ctx.send(f"Livestreams are not supported!\n{ctx.author.mention}, please try another query.")
             return False
-        
-        info = self.ytdlp.extract_info(yt_url, download=False)
+
+        info = await self.run_in_executor(self.ytdlp.extract_info, yt_url, False)
         audio_url = info.get('url')
 
         time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -238,7 +255,6 @@ class Youtube_Player(commands.Cog):
         error (Exception): The error that occurred while playing the audio
         '''
         if error:
-            print(f"An error occurred: {error}")
             emb = discord.Embed(title="An error occurred", color=0xff0000)
             emb.description = "An error occurred that the developer didn't account for.\nPlease contact the developer with the error message below and the command you ran."
             emb.add_field(name="** **", value=error)
@@ -311,15 +327,18 @@ class Youtube_Player(commands.Cog):
             self.current_ctx = ctx
             await wait_message.delete()
 
-        # Extract audio stream URL without downloading
-        wait_message = await ctx.send("Fetching the audio...")
+        wait_message = discord.Embed(
+            title="Please wait while I fetch the audio...", color=0x00ff00)
+        wait_message.add_field(
+            name="** **", value="This may take a few seconds!")
+        wait_message = await ctx.send(embed=wait_message)
         add_playlist = False
 
-        # Check if the user provided a query
+        #  Adding a random trending song from YouTube
         if not query:
             while True:
-                title, yt_url = await search_random()
-                info = self.ytdlp.extract_info(yt_url, download=False)
+                title, yt_url = await (search_random())
+                info = await self.run_in_executor(self.ytdlp.extract_info, yt_url, False)
                 audio_url = info['url']
                 duration = info.get('duration')
                 if title and yt_url and audio_url and duration:
@@ -333,20 +352,27 @@ class Youtube_Player(commands.Cog):
             # Adding Youtube playlist
             if "list=" in query:
                 add_playlist = True
-                info = self.ytdlp.extract_info(query, download=False)
+                play_list_len = get_playlist_length(query)
+                new_songs = get_playlist_song_urls(
+                    query, self.MAX_ADD_PLAYLIST_SIZE)
 
-                # Adding the first song to the playlist the rest will be added later
-                # to avoid the long wait time
-                first_song = info['entries'].pop(0)
-                if not await self.add_multi_to_playlist(ctx, first_song):
+                # Limit the number of songs added by one command
+                if play_list_len > self.MAX_ADD_PLAYLIST_SIZE:
+                    too_long_message = discord.Embed(
+                        title="Playlist too long", color=0xff0000)
+                    too_long_message.description = f"Only the first {self.MAX_ADD_PLAYLIST_SIZE} songs will be added to the playlist!"
+                    await ctx.send(embed=too_long_message)
+
+                # Adding the first song to the playlist, the rest will be added later
+                info = await self.run_in_executor(self.ytdlp.extract_info, new_songs.pop(0), False)
+                if not await self.add_single_to_playlist(ctx, info):
                     await wait_message.delete()
                     await ctx.send(f"Song not added to the playlist!")
                     return
-                            
             # Adding a single song with a YouTube URL
             else:
                 try:
-                    info = self.ytdlp.extract_info(query, download=False)
+                    info = await self.run_in_executor(self.ytdlp.extract_info, query, False)
                     if not await self.add_single_to_playlist(ctx, info):
                         await wait_message.delete()
                         await ctx.send(f"Song not added to the playlist!")
@@ -363,50 +389,68 @@ class Youtube_Player(commands.Cog):
 
         # Search for a song with the query
         else:
-            title, yt_url = search_query(query)
+            title, yt_url = await self.run_in_executor(search_query, query)
             if not title or not yt_url:
                 await ctx.send(f"No results found!\n{ctx.author.mention}, please try another query.")
                 return
 
-            info = self.ytdlp.extract_info(yt_url, download=False)
+            info = await self.run_in_executor(self.ytdlp.extract_info, yt_url, False)
             if not await self.add_single_to_playlist(ctx, info):
                 await wait_message.delete()
-                await ctx.send(f"Song not added to the playlist!")
                 return
 
         # Play the song if nothing is playing
+        await wait_message.delete()
         if not self.current_voice_client.is_playing():
             self.current_song = self.playlist.pop(0)
-            await wait_message.delete()
             await self.play_sound(self.current_song[2])
             await self.send_play_message(ctx)
 
-        # Add the song to the playlist if something is playing
         else:
-            title, yt_url, audio_url, duration, requester, time = self.playlist[-1]
-            duration = self.get_formatted_time(duration)
-            emb = discord.Embed(title="Added to Playlist", color=0x00ff00)
-            emb.add_field(
-                name="** **", value=f"[{title}]({yt_url}) ({duration})", inline=False)
-            emb.add_field(name="Requested by",
-                          value=f"{requester} at {time}", inline=False)
-            await wait_message.delete()
-            await ctx.send(embed=emb)
+            # Add single song to the playlist if something is playing
+            if not add_playlist:
+                title, yt_url, audio_url, duration, requester, time = self.playlist[-1]
+                duration = self.get_formatted_time(duration)
+                emb = discord.Embed(title="Added to Playlist", color=0x00ff00)
+                emb.add_field(
+                    name="** **", value=f"[{title}]({yt_url}) ({duration})", inline=False)
+                emb.add_field(name="Requested by",
+                              value=f"{requester} at {time}", inline=False)
+                # await wait_message.delete()
+                await ctx.send(embed=emb)
 
-        # Adding the rest of the playlist if a playlist was added
-        # 3 songs at a time to avoid timeout
         if add_playlist:
-            chunk_size = 3
-            for i in range(0, len(info['entries']), chunk_size):
-                tasks = []
-                chunk = info['entries'][i:i+chunk_size]
-                for entry in chunk:
-                    tasks.append(self.add_multi_to_playlist(ctx, entry))
+            # Adding the rest of the playlist if a playlist was added
+            async def add_rest_of_playlist():
+                while len(new_songs) > 0:
+                    info = await self.run_in_executor(self.ytdlp.extract_info, new_songs.pop(0), False)
+                    if not await self.add_single_to_playlist(ctx, info):
+                        await wait_message.delete()
+                        continue
 
-                await asyncio.gather(*tasks)
-            emb = discord.Embed(title="Added the rest of the playlist", color=0x00ff00)
-            emb.description = "Use the `!playlist` command to see the new order!"
-            await ctx.send(embed=emb)
+                    # Update the wait message
+                    new_wait_message = discord.Embed(
+                        title="Adding the playlist...", color=0x00ff00)
+                    new_wait_message.description = "Please wait while the rest of the playlist is added!"
+                    new_wait_message.add_field(
+                        name="** **", value=f"{len(new_songs)} songs left to add!")
+                    await wait_message.edit(embed=new_wait_message)
+
+                # Reached the end of the new playlist
+                await wait_message.delete()
+                emb = discord.Embed(
+                    title="New songs added!", color=0x00ff00)
+                emb.description = "Use the `!playlist` command to see the new playlist!"
+                await ctx.send(embed=emb)
+
+            # await wait_message.delete()
+            wait_message = discord.Embed(
+                title="Adding the playlist...", color=0x00ff00)
+            wait_message.description = "Please wait while the rest of the playlist is added!"
+            wait_message.add_field(
+                name="** **", value=f"{len(new_songs)} songs left to add!")
+            wait_message = await ctx.send(embed=wait_message)
+            asyncio.create_task(add_rest_of_playlist())
 
     # Command to show the current playlist
     @commands.command(help="Show the current playlist", usage="!playlist")

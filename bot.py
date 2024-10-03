@@ -16,7 +16,7 @@ async def load_extensions():
     await bot.load_extension('cogs.dogs')
     await bot.load_extension('cogs.music_player')
     await bot.load_extension('cogs.help')
-    # await bot.load_extension('cogs.errors')
+    await bot.load_extension('cogs.errors')
 
     # Disable the admin cog for now due to the lack of roles check
     # await bot.load_extension('cogs.admin')
