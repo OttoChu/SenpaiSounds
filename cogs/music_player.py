@@ -26,11 +26,6 @@ class Youtube_Player(commands.Cog):
         # YouTube downloader settings
         yt_dlp_format_options = {
             'format': 'bestaudio/best',  # Choose the best audio format
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',  # Extract audio
-                'preferredcodec': 'mp3',  # Use mp3 format for audio
-                'preferredquality': '192',  # Use 192 kbps quality
-            }],
             'default_search': 'ytsearch',  # Use ytsearch for search queries
             'quiet': True,  # Suppress console output
             'audioformat': 'mp3',  # Use mp3 format for audio
@@ -38,8 +33,9 @@ class Youtube_Player(commands.Cog):
             'extractor-args': 'youtube:skip=bypass',  # Skip age-gate
             'skip_download': True,  # Ensures no download happens
             'nocheckcertificate': True,  # In case SSL slows down the process
-            'force_generic_extractor': True,  # Use generic to speed up for playlists
-            'extract_flat': 'in_playlist'  # Extract all videos in the playlist
+            'force_generic_extractor': False,  # Use generic to speed up for playlists
+            'extract_flat': 'in_playlist',  # Extract all videos in the playlist
+            'youtube_include_dash_manifest': False  # Skip DASH manifest
         }
         self.ytdlp = yt_dlp.YoutubeDL(yt_dlp_format_options)
 
@@ -491,6 +487,43 @@ class Youtube_Player(commands.Cog):
                               list_description=description, items_per_page=5)
         emb = view.create_embed()
         await ctx.send(embed=emb, view=view)
+
+    # Command to move a song in the playlist
+    @commands.command(help="Move a song in the playlist", usage="!move <song_position> <new_position>")
+    async def move(self, ctx: commands.Context, old_position: int, new_position: int) -> None:
+        if len(self.playlist) == 0:
+            emb = discord.Embed(
+                title="Nothing in the playlist", color=0xff0000)
+            emb.description = "There are no songs in the playlist to move!"
+            await ctx.send(embed=emb)
+            return
+
+        if old_position < 1 or old_position > len(self.playlist) or new_position < 1 or new_position > len(self.playlist):
+            emb = discord.Embed(title="Invalid song position",
+                                color=0xff0000)
+            emb.description = "Please check the song position and try again!"
+            await ctx.send(embed=emb)
+            return
+
+        song = self.playlist.pop(old_position - 1)
+        self.playlist.insert(new_position - 1, song)
+        emb = discord.Embed(title="Song moved", color=0x00ff00)
+        emb.description = f"Song moved from position {old_position} to position {new_position}!"
+        await ctx.send(embed=emb)
+
+    # Command to remove a song from the playlist
+    @commands.command(help="Remove a song from the playlist", usage="!remove <song_position>")
+    async def remove(self, ctx: commands.Context, position: int) -> None:
+        if position < 1 or position > len(self.playlist):
+            emb = discord.Embed(title="Invalid song position", color=0xff0000)
+            emb.description = "Please check the song position and try again!"
+            await ctx.send(embed=emb)
+            return
+
+        song = self.playlist.pop(position - 1)
+        emb = discord.Embed(title="Song removed", color=0x00ff00)
+        emb.description = f"Removed [{song[0]}]({song[1]}) from the playlist!"
+        await ctx.send(embed=emb)
 
     # Command to clear the playlist
     @commands.command(help="Clear the current playlist", usage="!clear")

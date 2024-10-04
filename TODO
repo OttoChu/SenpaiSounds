@@ -10,9 +10,7 @@ The list ***may change*** between pushes.
 
 ## Playlist
 - loop playlist
-- edit playlist 
-    - remove chosen song
-    - move chosen song to different order
+
 - Add playlists from Spotify? 
     - will need to look into SPotify API
 
@@ -34,8 +32,3 @@ The list ***may change*** between pushes.
 
 ## Visual
 - better button look (grey out if the button doesn't work instead of loop)
-
-## Documentation 
-- write readme
-- mention ffmpeg is used 
-- mention what api are used

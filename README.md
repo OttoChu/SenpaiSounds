@@ -19,6 +19,7 @@ The bot allows users to effortlessly queue songs, manage playlists, and control 
 
 - ***Doggo Knowledge:*** Fetch fun dog facts and images, adding an element of joy and surprise.
 
+
 ## Future Enhancements
 While *SenpaiSounds* is currently a work in progress, plans for future updates include:
 
