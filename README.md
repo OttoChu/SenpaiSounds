@@ -1,5 +1,6 @@
-# SenpaiSounds
 ![SenpaiSounds banner](/photos/SenpaiSounds_banner.png)
+
+# SenpaiSounds
 
 *SenpaiSounds* is an innovative Discord music bot designed to enhance server experience by seamlessly streaming music from YouTube.
 
@@ -52,8 +53,4 @@ This project is licensed under the MIT Lisense - see the [LICENSE](LICENSE) file
 
 
 ## Acknowledgments
-This project make use of [FFmepg](https://www.ffmpeg.org/), a powerful multimedia framework that allows the handling of video, audio, and other media streams. Without FFmpeg, the audio processing and streaming functionalities of *SenpaiSounds* would not be possible.
-
-FFmpeg is a free, open-source software licensed under the [LGPL or GPL](https://ffmpeg.org/legal.html), depending on your usage, and is an essential component for many multimedia applications.
-
----
+This project make use of [FFmepg](https://www.ffmpeg.org/), a free, powerful, open-source software licensed under the [LGPL or GPL](https://ffmpeg.org/legal.html) multimedia framework that allows the handling of video, audio, and other media streams. Without FFmpeg, the audio processing and streaming functionalities of *SenpaiSounds* would not be possible.
