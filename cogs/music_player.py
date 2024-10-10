@@ -385,8 +385,9 @@ class Youtube_Player(commands.Cog):
 
         # Search for a song with the query
         else:
-            title, yt_url = await self.run_in_executor(search_query, query)
+            title, yt_url = await search_query(ctx, query)
             if not title or not yt_url:
+                await wait_message.delete()
                 await ctx.send(f"No results found!\n{ctx.author.mention}, please try another query.")
                 return
 

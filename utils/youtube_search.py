@@ -1,4 +1,5 @@
 from youtubesearchpython import VideosSearch
+import discord
 import urllib.request
 import json
 import random
@@ -8,26 +9,52 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def search_query(query: str) -> tuple:
+async def search_query(ctx: discord.ext.commands.Context, query: str) -> tuple:
     '''
-    Search for a video on YouTube and return the title and URL of the 
-    first result
+    Search for a video on YouTube and return the title and URL of the
+    first result. It doesn't return any live videos or videos without a duration
 
     Parameters:
+    ctx (discord.ext.commands.Context): The context of the command
     query (str): The search query
 
     Returns:
     title (str), url (str): The title and URL of the video
     '''
+    query = query.replace(' ', '+')
+    url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&q={query}&maxResults=5&type=video&key={os.getenv('YOUTUBE_API_KEY')}"
     try:
+        # Primary search method
+        with urllib.request.urlopen(url) as response:
+            if response.status == 200:
+                data = json.loads(response.read())
+                for item in data['items']:
+                    # Ignore live videos and videos without a duration
+                    if item['snippet']['liveBroadcastContent'] == 'live' or item.get('id', {}).get('videoId') == None:
+                        continue
+                    video_id = item['id']['videoId']
+                    video_url = f"https://www.youtube.com/watch?v={video_id}"
+                    video_title = item['snippet']['title']
+                    return video_title, video_url
+            elif response.status == 403:
+                await ctx.send("API key quota exceeded")
+
+        emb = discord.Embed(title="Using the secondary search method",
+                            description="The primary search method failed to find a suitable video. This method is slower and may not always return the best results.")
+        emb.add_field(name="** **", value="Please wait a moment...")
+        await ctx.send(embed=emb)
+
+        # Secondary search method
         video_search = VideosSearch(str(query), limit=5)
-    except Exception:
+        for result in video_search.result()['result']:
+            # Ignore live videos and videos without a duration
+            if not result.get('isLive', False) and result.get('duration') != None:
+                return result['title'], result['link']
         return None, None
 
-    for result in video_search.result()['result']:
-        if not result.get('isLive', False) and result.get('duration') != None:
-            return result['title'], result['link']
-    return None, None
+    except Exception as e:
+        print(f"Failed to fetch video: {e}")
+        return None, None
 
 
 async def search_random() -> tuple:
@@ -63,7 +90,7 @@ async def search_random() -> tuple:
     except Exception as e:
         print(f"Failed to fetch random video: {e}")
         return None, None
-    
+
 
 def get_playlist_length(playlist_url: str, limit: int = 50) -> int:
     '''
@@ -90,7 +117,8 @@ def get_playlist_length(playlist_url: str, limit: int = 50) -> int:
     except Exception as e:
         print(f"Failed to fetch playlist length: {e}")
         return 0
-    
+
+
 def get_playlist_song_urls(playlist_url: str, limit: int) -> list:
     '''
     Get the URLs of all the songs in a playlist
