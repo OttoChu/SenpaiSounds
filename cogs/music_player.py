@@ -419,10 +419,16 @@ class Youtube_Player(commands.Cog):
         if add_playlist:
             # Adding the rest of the playlist if a playlist was added
             async def add_rest_of_playlist():
+                failed_songs = []
                 while len(new_songs) > 0:
-                    info = await self.run_in_executor(self.ytdlp.extract_info, new_songs.pop(0), False)
-                    if not await self.add_single_to_playlist(ctx, info):
-                        await wait_message.delete()
+                    try:
+                        info = await self.run_in_executor(self.ytdlp.extract_info, new_songs.pop(0), False)
+                        if not await self.add_single_to_playlist(ctx, info):
+                            await wait_message.delete()
+                            continue
+                    except Exception as e:
+                        e = str(e).split("[0;31mERROR:[0m ")[1].split(":")[1].strip()
+                        failed_songs.append((info['title'], info['webpage_url'], e))
                         continue
 
                     # Update the wait message
@@ -438,6 +444,9 @@ class Youtube_Player(commands.Cog):
                 emb = discord.Embed(
                     title="New songs added!", color=0x00ff00)
                 emb.description = "Use the `!playlist` command to see the new playlist!"
+                if failed_songs:
+                    emb.add_field(name="Failed to add the following songs",
+                                  value="\n".join([f"[{title}]({url})\n{error}\n" for title, url, error in failed_songs]))
                 await ctx.send(embed=emb)
 
             # await wait_message.delete()
