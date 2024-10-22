@@ -687,6 +687,26 @@ class Youtube_Player(commands.Cog):
         await ctx.send(embed=emb)
         self.reset()
 
+    # Commands to play rickroll
+    @commands.command(help="Play a rickroll", usage="!rick")
+    async def rick(self, ctx: commands.Context) -> None:
+        if not ctx.author.voice:
+            await ctx.send(f"{ctx.author.mention}, you need to be in a voice channel to use this command!")
+            return
+        if not ctx.guild.voice_client:
+            voice_channel = ctx.author.voice.channel
+            self.current_voice_client = await voice_channel.connect()
+            self.current_ctx = ctx
+
+        def play_audio():
+            # Stream audio using discord's built-in support for audio URLs
+            ffmpeg_options = {'options': '-vn'}
+            source = discord.FFmpegPCMAudio("data/music.mp3", executable="utils/ffmpeg/bin/ffmpeg.exe",
+                                            **ffmpeg_options)
+            self.current_voice_client.play(source, after=self.after_playing)
+
+        play_audio()
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Youtube_Player(bot))
