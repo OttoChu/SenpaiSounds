@@ -7,7 +7,7 @@ class Bot_Info(commands.Cog):
         self.bot = bot
 
     # Command to show the bot's info
-    @commands.command(name="info", aliases=["botinfo", "bot_info"])
+    @commands.command(name="info", help="Show the bot's info", usage="!info", aliases=["botinfo", "bot_info"])
     async def info(self, ctx):
         embed = discord.Embed(title="About Me", color=0x00FF00)
         embed.set_thumbnail(url=self.bot.user.avatar)

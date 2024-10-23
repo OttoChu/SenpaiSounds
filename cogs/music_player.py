@@ -309,7 +309,7 @@ class Youtube_Player(commands.Cog):
             disconnect_after_timeout())
 
     # Command to play music from YouTube
-    @commands.command(help="Play music from YouTube", usage="!play\n!play <song name / YouTube URL>")
+    @commands.command(help="Play music from YouTube", usage="!play\n!play <song name / YouTube URL>", aliases=["p"])
     async def play(self, ctx: commands.Context, *, query: str = None) -> None:
         # User must be in a voice channel to use this command
         if not ctx.author.voice:
@@ -459,7 +459,7 @@ class Youtube_Player(commands.Cog):
             asyncio.create_task(add_rest_of_playlist())
 
     # Command to show the current playlist
-    @commands.command(help="Show the current playlist", usage="!playlist")
+    @commands.command(help="Show the current playlist", usage="!playlist", aliases=["pl"])
     async def playlist(self, ctx: commands.Context) -> None:
         if not self.playlist:
             emb = discord.Embed(title="Nothing else is in the playlist",
@@ -499,7 +499,7 @@ class Youtube_Player(commands.Cog):
         await ctx.send(embed=emb, view=view)
 
     # Command to move a song in the playlist
-    @commands.command(help="Move a song in the playlist", usage="!move <song_position> <new_position>")
+    @commands.command(help="Move a song in the playlist", usage="!move <song_position> <new_position>", aliases=["m"])
     async def move(self, ctx: commands.Context, old_position: int, new_position: int) -> None:
         if len(self.playlist) == 0:
             emb = discord.Embed(
@@ -671,7 +671,7 @@ class Youtube_Player(commands.Cog):
         await self.send_play_message(ctx)
 
     # Command to disconnect the bot from the voice channel
-    @commands.command(help="Disconnect the bot from the voice channel", usage="!disconnect")
+    @commands.command(help="Disconnect the bot from the voice channel", usage="!disconnect", aliases=["dc"])
     async def disconnect(self, ctx: commands.Context) -> None:
         if self.current_voice_client is None:
             await self.send_not_in_voice_channel_message(ctx)
@@ -686,6 +686,30 @@ class Youtube_Player(commands.Cog):
         emb.description = f"Call me back with the `!play song_name` command!"
         await ctx.send(embed=emb)
         self.reset()
+
+    # Commands to play rickroll
+    @commands.command(help="Play a rickroll", usage="!rick")
+    async def rick(self, ctx: commands.Context) -> None:
+        if not ctx.author.voice:
+            await ctx.send(f"{ctx.author.mention}, you need to be in a voice channel to use this command!")
+            return
+        if not ctx.guild.voice_client:
+            voice_channel = ctx.author.voice.channel
+            self.current_voice_client = await voice_channel.connect()
+            self.current_ctx = ctx
+
+        def play_audio():
+            # Stop the current song if it is playing
+            if self.current_voice_client.is_playing():
+                self.playlist.insert(0, self.current_song)
+                self.current_voice_client.stop()
+
+            ffmpeg_options = {'options': '-vn'}
+            source = discord.FFmpegPCMAudio("data/music.mp3", executable="utils/ffmpeg/bin/ffmpeg.exe",
+                                            **ffmpeg_options)
+            self.current_voice_client.play(source, after=self.after_playing)
+
+        await self.run_in_executor(play_audio)
 
 
 async def setup(bot: commands.Bot) -> None:
