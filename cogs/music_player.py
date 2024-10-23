@@ -699,13 +699,17 @@ class Youtube_Player(commands.Cog):
             self.current_ctx = ctx
 
         def play_audio():
-            # Stream audio using discord's built-in support for audio URLs
+            # Stop the current song if it is playing
+            if self.current_voice_client.is_playing():
+                self.playlist.insert(0, self.current_song)
+                self.current_voice_client.stop()
+
             ffmpeg_options = {'options': '-vn'}
             source = discord.FFmpegPCMAudio("data/music.mp3", executable="utils/ffmpeg/bin/ffmpeg.exe",
                                             **ffmpeg_options)
             self.current_voice_client.play(source, after=self.after_playing)
 
-        play_audio()
+        await self.run_in_executor(play_audio)
 
 
 async def setup(bot: commands.Bot) -> None:
