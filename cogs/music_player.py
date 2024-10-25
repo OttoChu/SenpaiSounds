@@ -600,9 +600,11 @@ class Youtube_Player(commands.Cog):
         if not self.current_voice_client:
             await self.send_not_in_voice_channel_message(ctx)
             return
-
-        self.current_voice_client.stop()
-
+        
+        if self.current_song is None:
+            self.send_nothing_is_playing_message(ctx)
+            return
+        
         # Loop the current song if the loop flag is set
         if self.loop_current[0]:
             emb = discord.Embed(
@@ -611,6 +613,8 @@ class Youtube_Player(commands.Cog):
             await ctx.send(embed=emb)
             await self.play_sound(self.current_song[2])
             return
+
+        self.current_voice_client.stop()
 
         # Continue playing the playlist if there are more songs
         if len(self.playlist) > 0:

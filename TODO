@@ -8,9 +8,12 @@ The list ***may change*** between pushes.
 - Disconnecting the bot while having operation(s) running in the background causes undesirable behaviours 
     - Example: Disconnecting when already adding playlist
 
+## QoL 
+- make `!commands` into a slash command so only the user who called it sees it
+- stop printing playing message for looped song
+
 ## Playlist
 - loop playlist
-
 - Add playlists from Spotify? 
     - will need to look into SPotify API
 
