@@ -43,6 +43,17 @@ While *SenpaiSounds* is currently a work in progress, plans for future updates i
 
 - [TheDogAPI](https://thedogapi.com/) - Used for displaying dog knowledge and pictures
 
+## To run locally
+1. Install the dependencies listed in `requirements.txt`. You may use the following command.
+
+        pip install -r requirements.txt
+
+2. Create your own API keys that is required for this project. You will need to follow the guides on the websites in this [section](#apis-used).
+
+3. Put all your API keys into `.env_example` and rename it to `.env`.
+
+4. Run `bot.py` to get the bot online.
+
 
 ## Contribution
 *SenpaiSounds* is currently an individual project but contributions are welcome! Whether you want to suggest features, report bugs, or help improve the bot, your input can help shape the future of this project.
