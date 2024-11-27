@@ -96,10 +96,11 @@ class Youtube_Player(commands.Cog):
                                             **ffmpeg_options)
             self.current_voice_client.play(source, after=self.after_playing)
 
-        await self.run_in_executor(play_audio)
         # Track the time the song started playing
         self.start_time = datetime.datetime.now().timestamp()
         self.time_passed = 0
+        
+        await self.run_in_executor(play_audio)
 
     # Helper function to return loop status
     def get_loop_status(self) -> str:
