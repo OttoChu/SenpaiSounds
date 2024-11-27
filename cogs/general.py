@@ -79,7 +79,7 @@ class General(commands.Cog):
     @commands.command(help="Repeats the message",
                       usage="!echo <message>")
     async def echo(self, ctx: commands.Context, *, message: str):
-        if "I am dumb" in message:
+        if "I AM DUMB" in message.upper():
             await ctx.send(f"{ctx.author.mention} is dumb. I agree.")
             return
         elif "@everyone" in message or "@here" in message:
