@@ -44,6 +44,7 @@ class General(commands.Cog):
             embed = discord.Embed(title="Laughing Time", color=0x00ff00)
             embed.description = laugh_message
             embed.set_image(url=gif_url)
+            embed.set_footer(text="Powered by GIPHY")
             await ctx.send(embed=embed)
 
     # Command to send a slapping gif
@@ -71,6 +72,7 @@ class General(commands.Cog):
         embed = discord.Embed(title="Slapping Time", color=0x00ff00)
         embed.description = slap_message
         embed.set_image(url=gif_url)
+        embed.set_footer(text="Powered by GIPHY")
         await ctx.send(embed=embed)
 
     # Command to echo the message
