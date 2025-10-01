@@ -336,7 +336,16 @@ class Youtube_Player(commands.Cog):
             while True:
                 title, yt_url = await (search_random())
                 info = await self.run_in_executor(self.ytdlp.extract_info, yt_url, False)
-                audio_url = info['url']
+                
+                # This is just a hot fix for yt-dlp 
+                # It returns a json that is broken for some reason and the url field is missing
+                audio_url = [v for k, v in info.items() if isinstance(v, str) and v.startswith('https://rr')][0].strip("'")
+                if not audio_url:
+                    print("Hot fix failed (insert sadge gif here)")
+                    print("FFMEG will probably throw an error code that is really long")
+                    # Trying the normal way just in case
+                    audio_url = info['url']
+
                 duration = info.get('duration')
                 if title and yt_url and audio_url and duration:
                     time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
